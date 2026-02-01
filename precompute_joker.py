@@ -143,6 +143,60 @@ def compute_v3_joker_for_mask(mask, upper, yahtzee_status,
 
 
 @njit(cache=True)
+def compute_v2_joker_with_best_keep(v3, num_keeps, trans_starts, trans_ends,
+                                     trans_next, trans_prob, v2_out, best_keep_out):
+    """Compute v2 for all rolls given v3 values, also storing best keep indices."""
+    for rid in range(NUM_ROLLS):
+        best_ev = -1e9
+        best_k = 0
+        n_keeps = num_keeps[rid]
+
+        for k in range(n_keeps):
+            t_start = trans_starts[rid, k]
+            t_end = trans_ends[rid, k]
+
+            ev = 0.0
+            for t in range(t_start, t_end):
+                next_rid = trans_next[t]
+                prob = trans_prob[t]
+                ev += prob * v3[next_rid]
+
+            if ev > best_ev:
+                best_ev = ev
+                best_k = k
+
+        v2_out[rid] = best_ev
+        best_keep_out[rid] = best_k
+
+
+@njit(cache=True)
+def compute_v1_joker_with_best_keep(v2, num_keeps, trans_starts, trans_ends,
+                                     trans_next, trans_prob, v1_out, best_keep_out):
+    """Compute v1 for all rolls given v2 values, also storing best keep indices."""
+    for rid in range(NUM_ROLLS):
+        best_ev = -1e9
+        best_k = 0
+        n_keeps = num_keeps[rid]
+
+        for k in range(n_keeps):
+            t_start = trans_starts[rid, k]
+            t_end = trans_ends[rid, k]
+
+            ev = 0.0
+            for t in range(t_start, t_end):
+                next_rid = trans_next[t]
+                prob = trans_prob[t]
+                ev += prob * v2[next_rid]
+
+            if ev > best_ev:
+                best_ev = ev
+                best_k = k
+
+        v1_out[rid] = best_ev
+        best_keep_out[rid] = best_k
+
+
+@njit(cache=True)
 def compute_v2_joker(v3, num_keeps, trans_starts, trans_ends, trans_next, trans_prob, v2_out):
     """Compute v2 for all rolls given v3 values."""
     for rid in range(NUM_ROLLS):

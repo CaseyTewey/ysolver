@@ -46,6 +46,9 @@ _SCORE_TABLE: List[List[int]] = None
 _JOKER_TABLES = None
 _JOKER_SCORE_TABLE = None
 
+# Runtime cache for joker v1/v2/v3 arrays by (mask, upper, yahtzee_status)
+_v_cache_joker = {}
+
 
 def _load_tables():
     """Load precomputed tables from cache."""
@@ -183,6 +186,72 @@ def _find_best_keep(rid, target_arr, num_keeps, trans_starts, trans_ends, trans_
     return best_k, best_ev
 
 
+# =============================================================================
+# Numba-accelerated functions for JOKER mode v1/v2/v3 computation
+# =============================================================================
+
+@njit(cache=True)
+def _compute_v3_joker_all_rolls(mask, upper, yahtzee_status, score_table, joker_score_table,
+                                 ev_remaining, is_yahtzee, yahtzee_face):
+    """Compute v3 for all 252 rolls for a given (mask, upper, yahtzee_status). Returns array[252]."""
+    v3_arr = np.zeros(NUM_ROLLS, dtype=np.float64)
+
+    # Find legal categories
+    legal_cats_arr = np.zeros(13, dtype=np.int32)
+    n_legal = 0
+    for c in range(13):
+        if not (mask & (1 << c)):
+            legal_cats_arr[n_legal] = c
+            n_legal += 1
+
+    for rid in range(NUM_ROLLS):
+        is_ytz = is_yahtzee[rid]
+        ytz_face = yahtzee_face[rid]
+
+        # Joker bonus if rolling another yahtzee after scoring 50
+        joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
+
+        # Check forced category (only when eligible for joker bonus)
+        forced_cat = -1
+        if is_ytz and yahtzee_status == YAHTZEE_SCORED and ytz_face >= 0:
+            upper_cat = ytz_face
+            if not (mask & (1 << upper_cat)):
+                forced_cat = upper_cat
+
+        best_ev = -1e9
+
+        for i in range(n_legal):
+            cat = legal_cats_arr[i]
+
+            # Skip if forced to different category
+            if forced_cat >= 0 and cat != forced_cat:
+                continue
+
+            # Get score using appropriate table
+            if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+                pts = joker_score_table[rid, cat]
+            else:
+                pts = score_table[rid, cat]
+
+            new_mask = mask | (1 << cat)
+            new_upper = upper + pts if cat < 6 else upper
+            if new_upper > MAX_UPPER:
+                new_upper = MAX_UPPER
+
+            # Update yahtzee status if scoring in yahtzee category
+            new_ys = yahtzee_status
+            if cat == YAHTZEE_CATEGORY:
+                new_ys = YAHTZEE_SCORED if pts == 50 else YAHTZEE_SCRATCHED
+
+            ev = pts + joker_bonus + ev_remaining[new_mask, new_upper, new_ys]
+            if ev > best_ev:
+                best_ev = ev
+
+        v3_arr[rid] = best_ev
+
+    return v3_arr
+
+
 # Cache for v1/v2/v3 arrays by (mask, upper)
 _v_cache = {}
 
@@ -220,6 +289,50 @@ def _get_v_arrays(mask: int, upper: int):
         _v_cache[key] = (v1_arr, v2_arr, v3_arr)
 
     return _v_cache[key]
+
+
+def _get_v_arrays_joker(mask: int, upper: int, yahtzee_status: int):
+    """
+    Get cached v1, v2, v3 arrays for a (mask, upper, yahtzee_status) joker state.
+
+    This uses runtime caching to avoid redundant computation. The first call
+    for a given state computes the arrays (~1-2ms), subsequent calls are instant.
+    """
+    upper = min(upper, MAX_UPPER)
+    key = (mask, upper, yahtzee_status)
+
+    if key not in _v_cache_joker:
+        tables = _load_joker_tables()
+        trans = _load_transitions()
+
+        v3_arr = _compute_v3_joker_all_rolls(
+            mask, upper, yahtzee_status,
+            tables['score_table'],
+            tables['joker_score_table'],
+            tables['ev_remaining'],
+            tables['is_yahtzee'],
+            tables['yahtzee_face']
+        )
+        v2_arr = _compute_v2_all_rolls(
+            v3_arr,
+            trans['num_keeps'],
+            trans['trans_starts'],
+            trans['trans_ends'],
+            trans['trans_next'],
+            trans['trans_prob']
+        )
+        v1_arr = _compute_v1_all_rolls(
+            v2_arr,
+            trans['num_keeps'],
+            trans['trans_starts'],
+            trans['trans_ends'],
+            trans['trans_next'],
+            trans['trans_prob']
+        )
+
+        _v_cache_joker[key] = (v1_arr, v2_arr, v3_arr)
+
+    return _v_cache_joker[key]
 
 
 def clamp_upper(upper: int) -> int:
@@ -512,6 +625,64 @@ def ev_remaining_joker(mask: int, upper: int, yahtzee_status: int) -> float:
     return float(tables['ev_remaining'][mask, upper, yahtzee_status])
 
 
+def v3_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> float:
+    """Best expected value after roll 3 in joker mode, must choose a category."""
+    v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
+    return float(v3_arr[roll_idx])
+
+
+def v2_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> float:
+    """Best expected value after roll 2 in joker mode, before choosing what to keep."""
+    v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
+    return float(v2_arr[roll_idx])
+
+
+def v1_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> float:
+    """Best expected value after roll 1 in joker mode, before choosing what to keep."""
+    v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
+    return float(v1_arr[roll_idx])
+
+
+def best_keep_roll1_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> Counts:
+    """Get optimal keep decision after roll 1 in joker mode."""
+    upper = min(upper, MAX_UPPER)
+    v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
+    trans = _load_transitions()
+
+    best_k, _ = _find_best_keep(
+        roll_idx, v2_arr,
+        trans['num_keeps'],
+        trans['trans_starts'],
+        trans['trans_ends'],
+        trans['trans_next'],
+        trans['trans_prob']
+    )
+
+    # Convert keep index back to Counts
+    keeps = get_keep_options(roll_idx)
+    return keeps[best_k]
+
+
+def best_keep_roll2_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> Counts:
+    """Get optimal keep decision after roll 2 in joker mode."""
+    upper = min(upper, MAX_UPPER)
+    v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
+    trans = _load_transitions()
+
+    best_k, _ = _find_best_keep(
+        roll_idx, v3_arr,
+        trans['num_keeps'],
+        trans['trans_starts'],
+        trans['trans_ends'],
+        trans['trans_next'],
+        trans['trans_prob']
+    )
+
+    # Convert keep index back to Counts
+    keeps = get_keep_options(roll_idx)
+    return keeps[best_k]
+
+
 def best_category_joker(roll_idx: int, mask: int, upper: int,
                         yahtzee_status: int) -> Tuple[int, float]:
     """
@@ -702,22 +873,36 @@ def get_recommendation_joker(dice: List[int], mask: int, upper: int,
             result["joker_bonus"] = YAHTZEE_BONUS
 
     elif rolls_remaining in [1, 2]:
-        # Need to recommend keep - use precomputed best keeps
-        # For now, fall back to computing on-the-fly (Phase 3 will optimize)
-        # TODO: Use precomputed best_keep arrays from joker cache
-
-        # Compute v3 for this state
-        v3_values = _compute_v3_joker_for_state(mask, upper, yahtzee_status, tables)
+        # Use cached v1/v2/v3 arrays for this state (computed once, then cached)
+        v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
+        trans = _load_transitions()
 
         if rolls_remaining == 1:
-            # Find best keep for roll 2
-            keep, ev = _find_best_keep_joker(roll_idx, v3_values, tables)
-            result["expected_value"] = ev
+            # After roll 2: find best keep using v3 as target
+            best_k, ev = _find_best_keep(
+                roll_idx, v3_arr,
+                trans['num_keeps'],
+                trans['trans_starts'],
+                trans['trans_ends'],
+                trans['trans_next'],
+                trans['trans_prob']
+            )
+            result["expected_value"] = float(v2_arr[roll_idx])
         else:
-            # Find best keep for roll 1 (need v2 first)
-            v2_values = _compute_v2_joker_for_state(v3_values, tables)
-            keep, ev = _find_best_keep_joker(roll_idx, v2_values, tables)
-            result["expected_value"] = ev
+            # After roll 1: find best keep using v2 as target
+            best_k, ev = _find_best_keep(
+                roll_idx, v2_arr,
+                trans['num_keeps'],
+                trans['trans_starts'],
+                trans['trans_ends'],
+                trans['trans_next'],
+                trans['trans_prob']
+            )
+            result["expected_value"] = float(v1_arr[roll_idx])
+
+        # Convert keep index to Counts
+        keeps = get_keep_options(roll_idx)
+        keep = keeps[best_k]
 
         result["action"] = "keep"
         result["keep_counts"] = keep
@@ -845,6 +1030,17 @@ def warm_cache_joker(verbose: bool = True):
         if verbose:
             print(f"ERROR: {e}")
         raise
+
+
+def clear_joker_v_cache():
+    """
+    Clear the runtime v1/v2/v3 cache for joker mode.
+
+    This can be useful for memory management in long-running applications.
+    The cache will be repopulated on-demand as recommendations are requested.
+    """
+    global _v_cache_joker
+    _v_cache_joker.clear()
 
 
 def get_expected_score_fresh_game_joker() -> float:

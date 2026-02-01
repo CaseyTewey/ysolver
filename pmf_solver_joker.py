@@ -15,6 +15,7 @@ import sys
 import time
 from typing import Dict, Tuple, List, Optional
 import numpy as np
+from scipy.signal import fftconvolve
 
 from dice import Counts, enumerate_rolls, roll_id, id_to_roll
 from scoring import (
@@ -74,15 +75,66 @@ def shift_pmf(pmf: PMF, delta: int) -> PMF:
 
 def convolve_pmf(pmf1: PMF, pmf2: PMF) -> PMF:
     """
-    Convolve two PMFs (sum of independent random variables).
+    Convolve two PMFs using FFT for O(n log n) complexity.
+
+    This replaces the naive O(n^2) nested loop implementation with
+    scipy.signal.fftconvolve for dramatic speedup on large PMFs.
 
     Result[k] = sum over i,j where i+j=k of pmf1[i] * pmf2[j]
+
+    Args:
+        pmf1: First probability mass function (score -> probability)
+        pmf2: Second probability mass function (score -> probability)
+
+    Returns:
+        Convolved PMF representing the distribution of the sum
     """
+    # Handle edge cases
+    if not pmf1 or not pmf2:
+        return {}
+
+    if len(pmf1) == 1 and len(pmf2) == 1:
+        # Both single-entry: direct computation is faster
+        s1, p1 = next(iter(pmf1.items()))
+        s2, p2 = next(iter(pmf2.items()))
+        return {s1 + s2: p1 * p2}
+
+    # For very small PMFs, use direct computation (faster than FFT overhead)
+    if len(pmf1) * len(pmf2) < 500:
+        result = {}
+        for s1, p1 in pmf1.items():
+            for s2, p2 in pmf2.items():
+                s = s1 + s2
+                result[s] = result.get(s, 0.0) + p1 * p2
+        return result
+
+    # Convert sparse PMF dicts to dense arrays for FFT
+    min1, max1 = min(pmf1.keys()), max(pmf1.keys())
+    min2, max2 = min(pmf2.keys()), max(pmf2.keys())
+
+    # Create dense arrays (offset so indices start at 0)
+    arr1 = np.zeros(max1 - min1 + 1, dtype=np.float64)
+    arr2 = np.zeros(max2 - min2 + 1, dtype=np.float64)
+
+    for s, p in pmf1.items():
+        arr1[s - min1] = p
+    for s, p in pmf2.items():
+        arr2[s - min2] = p
+
+    # FFT convolution: O(n log n) instead of O(n^2)
+    conv = fftconvolve(arr1, arr2, mode='full')
+
+    # Convert back to sparse PMF dict
+    # The result array starts at index 0, corresponding to score min1 + min2
+    result_min = min1 + min2
     result = {}
-    for s1, p1 in pmf1.items():
-        for s2, p2 in pmf2.items():
-            s = s1 + s2
-            result[s] = result.get(s, 0.0) + p1 * p2
+
+    # Use a threshold to avoid storing near-zero probabilities
+    eps = 1e-15
+    for i, p in enumerate(conv):
+        if p > eps:
+            result[result_min + i] = p
+
     return result
 
 
@@ -133,18 +185,43 @@ def print_progress_bar(current: int, total: int, start_time: float,
 # =============================================================================
 
 # Cache key: (mask, upper, yahtzee_status)
-_PMF_JOKER_CACHE: Dict[Tuple[int, int, int], PMF] = {}
+# Using OrderedDict for LRU eviction
+from collections import OrderedDict
+
+_PMF_JOKER_CACHE = OrderedDict()  # OrderedDict[Tuple[int, int, int], PMF]
+_PMF_CACHE_MAX_SIZE = 10000  # Limit cache to 10K entries (~50-100MB max)
 
 
 def clear_pmf_joker_cache():
     """Clear the joker PMF cache."""
     global _PMF_JOKER_CACHE
-    _PMF_JOKER_CACHE = {}
+    _PMF_JOKER_CACHE = OrderedDict()
 
 
 def get_pmf_cache_size() -> int:
     """Get current cache size."""
     return len(_PMF_JOKER_CACHE)
+
+
+def _cache_get(key: Tuple[int, int, int]) -> Optional[PMF]:
+    """Get from cache with LRU update."""
+    if key in _PMF_JOKER_CACHE:
+        # Move to end (most recently used)
+        _PMF_JOKER_CACHE.move_to_end(key)
+        return _PMF_JOKER_CACHE[key]
+    return None
+
+
+def _cache_put(key: Tuple[int, int, int], value: PMF):
+    """Put in cache with LRU eviction."""
+    global _PMF_JOKER_CACHE
+    if key in _PMF_JOKER_CACHE:
+        _PMF_JOKER_CACHE.move_to_end(key)
+    else:
+        if len(_PMF_JOKER_CACHE) >= _PMF_CACHE_MAX_SIZE:
+            # Evict oldest (first) entry
+            _PMF_JOKER_CACHE.popitem(last=False)
+    _PMF_JOKER_CACHE[key] = value
 
 
 # =============================================================================
@@ -358,14 +435,15 @@ def pmf_remaining_joker(mask: int, upper: int, yahtzee_status: int,
         PMF mapping additional_score -> probability
     """
     cache_key = (mask, upper, yahtzee_status)
-    if cache_key in _PMF_JOKER_CACHE:
-        return _PMF_JOKER_CACHE[cache_key]
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     # Base case: all categories filled
     if mask == FULL_MASK:
         bonus = UPPER_BONUS if upper >= UPPER_BONUS_THRESHOLD else 0
         result = {bonus: 1.0}
-        _PMF_JOKER_CACHE[cache_key] = result
+        _cache_put(cache_key, result)
         return result
 
     # Compute turn PMF and convolve with future
@@ -390,7 +468,7 @@ def pmf_remaining_joker(mask: int, upper: int, yahtzee_status: int,
     # Prune result
     final_pmf = prune_pmf(final_pmf, eps, topk)
 
-    _PMF_JOKER_CACHE[cache_key] = final_pmf
+    _cache_put(cache_key, final_pmf)
     return final_pmf
 
 

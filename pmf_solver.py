@@ -7,6 +7,8 @@ under optimal play, enabling win probability calculations.
 
 from typing import Dict, Tuple, List, Optional
 from functools import lru_cache
+import numpy as np
+from scipy.signal import fftconvolve
 from dice import Counts, enumerate_rolls, roll_id, id_to_roll
 from scoring import (
     get_score_table, NUM_CATEGORIES, UPPER_BONUS,
@@ -54,15 +56,66 @@ def shift_pmf(pmf: PMF, delta: int) -> PMF:
 
 def convolve_pmf(pmf1: PMF, pmf2: PMF) -> PMF:
     """
-    Convolve two PMFs (sum of independent random variables).
+    Convolve two PMFs using FFT for O(n log n) complexity.
+
+    This replaces the naive O(n^2) nested loop implementation with
+    scipy.signal.fftconvolve for dramatic speedup on large PMFs.
 
     Result[k] = sum over i,j where i+j=k of pmf1[i] * pmf2[j]
+
+    Args:
+        pmf1: First probability mass function (score -> probability)
+        pmf2: Second probability mass function (score -> probability)
+
+    Returns:
+        Convolved PMF representing the distribution of the sum
     """
+    # Handle edge cases
+    if not pmf1 or not pmf2:
+        return {}
+
+    if len(pmf1) == 1 and len(pmf2) == 1:
+        # Both single-entry: direct computation is faster
+        s1, p1 = next(iter(pmf1.items()))
+        s2, p2 = next(iter(pmf2.items()))
+        return {s1 + s2: p1 * p2}
+
+    # For very small PMFs, use direct computation (faster than FFT overhead)
+    if len(pmf1) * len(pmf2) < 500:
+        result = {}
+        for s1, p1 in pmf1.items():
+            for s2, p2 in pmf2.items():
+                s = s1 + s2
+                result[s] = result.get(s, 0.0) + p1 * p2
+        return result
+
+    # Convert sparse PMF dicts to dense arrays for FFT
+    min1, max1 = min(pmf1.keys()), max(pmf1.keys())
+    min2, max2 = min(pmf2.keys()), max(pmf2.keys())
+
+    # Create dense arrays (offset so indices start at 0)
+    arr1 = np.zeros(max1 - min1 + 1, dtype=np.float64)
+    arr2 = np.zeros(max2 - min2 + 1, dtype=np.float64)
+
+    for s, p in pmf1.items():
+        arr1[s - min1] = p
+    for s, p in pmf2.items():
+        arr2[s - min2] = p
+
+    # FFT convolution: O(n log n) instead of O(n^2)
+    conv = fftconvolve(arr1, arr2, mode='full')
+
+    # Convert back to sparse PMF dict
+    # The result array starts at index 0, corresponding to score min1 + min2
+    result_min = min1 + min2
     result = {}
-    for s1, p1 in pmf1.items():
-        for s2, p2 in pmf2.items():
-            s = s1 + s2
-            result[s] = result.get(s, 0.0) + p1 * p2
+
+    # Use a threshold to avoid storing near-zero probabilities
+    eps = 1e-15
+    for i, p in enumerate(conv):
+        if p > eps:
+            result[result_min + i] = p
+
     return result
 
 
