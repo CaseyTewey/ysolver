@@ -9,6 +9,7 @@ from flask import Flask, render_template, jsonify, request
 import json
 import math
 import os
+import re
 from datetime import datetime
 
 # Game results file path
@@ -686,6 +687,155 @@ def game_details(game_id):
             return jsonify(game)
 
     return jsonify({'error': 'Game not found'}), 404
+
+
+@app.route('/api/article', methods=['GET'])
+def get_article():
+    """Serve the 'You Are Playing Yahtzee Wrong' article as HTML."""
+    article_path = os.path.join(os.path.dirname(__file__), 'you-are-probably-playing-yahtzee-wrong.md')
+
+    try:
+        with open(article_path, 'r') as f:
+            markdown_content = f.read()
+
+        # Simple markdown to HTML conversion
+        html = markdown_to_html(markdown_content)
+        return jsonify({'html': html})
+    except FileNotFoundError:
+        return jsonify({'error': 'Article not found'}), 404
+
+
+def markdown_to_html(md):
+    """Convert markdown to HTML (simple implementation)."""
+    lines = md.split('\n')
+    html_lines = []
+    in_table = False
+    in_code_block = False
+    in_list = False
+    list_type = None
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # Code blocks
+        if line.strip().startswith('```'):
+            if in_code_block:
+                html_lines.append('</code></pre>')
+                in_code_block = False
+            else:
+                html_lines.append('<pre><code>')
+                in_code_block = True
+            i += 1
+            continue
+
+        if in_code_block:
+            html_lines.append(escape_html(line))
+            i += 1
+            continue
+
+        # Close list if needed
+        if in_list and not line.strip().startswith(('-', '*')) and not re.match(r'^\d+\.', line.strip()):
+            html_lines.append(f'</{list_type}>')
+            in_list = False
+
+        # Tables
+        if '|' in line and not in_table:
+            # Check if next line is separator
+            if i + 1 < len(lines) and re.match(r'^[\s|:-]+$', lines[i + 1]):
+                in_table = True
+                html_lines.append('<table>')
+                # Header row
+                cells = [c.strip() for c in line.split('|')[1:-1]]
+                html_lines.append('<tr>' + ''.join(f'<th>{process_inline(c)}</th>' for c in cells) + '</tr>')
+                i += 2  # Skip separator line
+                continue
+
+        if in_table:
+            if '|' not in line or line.strip() == '':
+                html_lines.append('</table>')
+                in_table = False
+            else:
+                cells = [c.strip() for c in line.split('|')[1:-1]]
+                html_lines.append('<tr>' + ''.join(f'<td>{process_inline(c)}</td>' for c in cells) + '</tr>')
+                i += 1
+                continue
+
+        # Headers
+        if line.startswith('# '):
+            html_lines.append(f'<h1>{process_inline(line[2:])}</h1>')
+        elif line.startswith('## '):
+            html_lines.append(f'<h2>{process_inline(line[3:])}</h2>')
+        elif line.startswith('### '):
+            html_lines.append(f'<h3>{process_inline(line[4:])}</h3>')
+        elif line.startswith('#### '):
+            html_lines.append(f'<h4>{process_inline(line[5:])}</h4>')
+        # Horizontal rule
+        elif line.strip() in ['---', '***', '___']:
+            html_lines.append('<hr>')
+        # Unordered list
+        elif line.strip().startswith(('-', '*')) and len(line.strip()) > 1 and line.strip()[1] == ' ':
+            if not in_list or list_type != 'ul':
+                if in_list:
+                    html_lines.append(f'</{list_type}>')
+                html_lines.append('<ul>')
+                in_list = True
+                list_type = 'ul'
+            content = line.strip()[2:]
+            html_lines.append(f'<li>{process_inline(content)}</li>')
+        # Ordered list
+        elif re.match(r'^\d+\.', line.strip()):
+            if not in_list or list_type != 'ol':
+                if in_list:
+                    html_lines.append(f'</{list_type}>')
+                html_lines.append('<ol>')
+                in_list = True
+                list_type = 'ol'
+            content = re.sub(r'^\d+\.\s*', '', line.strip())
+            html_lines.append(f'<li>{process_inline(content)}</li>')
+        # Blockquote
+        elif line.startswith('>'):
+            html_lines.append(f'<blockquote>{process_inline(line[1:].strip())}</blockquote>')
+        # Paragraph
+        elif line.strip():
+            html_lines.append(f'<p>{process_inline(line)}</p>')
+
+        i += 1
+
+    # Close any open elements
+    if in_list:
+        html_lines.append(f'</{list_type}>')
+    if in_table:
+        html_lines.append('</table>')
+    if in_code_block:
+        html_lines.append('</code></pre>')
+
+    return '\n'.join(html_lines)
+
+
+def process_inline(text):
+    """Process inline markdown elements."""
+    # Escape HTML first
+    text = escape_html(text)
+
+    # Bold
+    text = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', text)
+
+    # Italic
+    text = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', text)
+
+    # Inline code
+    text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
+
+    # Links
+    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2" target="_blank">\1</a>', text)
+
+    return text
+
+
+def escape_html(text):
+    """Escape HTML special characters."""
+    return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
 if __name__ == '__main__':

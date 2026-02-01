@@ -651,6 +651,150 @@
             color: #ffd700;
         }
 
+        /* Article button */
+        .article-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.7);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+        .article-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        /* Article overlay */
+        .article-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .article-overlay.hidden {
+            display: none;
+        }
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            padding: 40px;
+            border: 2px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+        .article-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .article-close:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
+        .article-content {
+            color: rgba(255,255,255,0.9);
+            line-height: 1.7;
+        }
+        .article-content h1 {
+            color: #fff;
+            font-size: 2em;
+            margin-bottom: 10px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        .article-content h2 {
+            color: #4CAF50;
+            font-size: 1.5em;
+            margin-top: 35px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(76,175,80,0.3);
+        }
+        .article-content h3 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+        .article-content p {
+            margin-bottom: 15px;
+        }
+        .article-content strong {
+            color: #fff;
+        }
+        .article-content code {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        .article-content th {
+            background: rgba(76,175,80,0.3);
+            color: #fff;
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .article-content td {
+            padding: 10px 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.02);
+        }
+        .article-content tr:hover td {
+            background: rgba(255,255,255,0.05);
+        }
+        .article-content hr {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin: 30px 0;
+        }
+        .article-content blockquote {
+            border-left: 3px solid #ffd700;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: rgba(255,255,255,0.7);
+            font-style: italic;
+        }
+        .article-content ul, .article-content ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        .article-content li {
+            margin-bottom: 8px;
+        }
+        .article-content em {
+            color: rgba(255,255,255,0.6);
+        }
+
         /* Mode selector overlay */
         .mode-overlay {
             position: fixed;
@@ -1733,6 +1877,17 @@
             <span id="calc-mode-badge" class="calc-mode-badge">TRADITIONAL</span>
             Fresh EV: <span id="fresh-ev">--</span> |
             <span id="last-calc-info" class="last-calc-info">Ready</span>
+            <button class="article-btn" onclick="showArticle()">You're Playing Wrong</button>
+        </div>
+    </div>
+
+    <!-- Article Overlay -->
+    <div class="article-overlay hidden" id="article-overlay">
+        <div class="article-container">
+            <button class="article-close" onclick="hideArticle()">&times;</button>
+            <div class="article-content" id="article-content">
+                <!-- Article loaded via JS -->
+            </div>
         </div>
     </div>
 
@@ -3853,6 +4008,53 @@
             // Initialize win probabilities
             updateWinProbabilities();
         });
+
+        // Article functions
+        let articleLoaded = false;
+
+        function showArticle() {
+            const overlay = document.getElementById('article-overlay');
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            if (!articleLoaded) {
+                loadArticle();
+            }
+        }
+
+        function hideArticle() {
+            const overlay = document.getElementById('article-overlay');
+            overlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideArticle();
+            }
+        });
+
+        // Close on click outside
+        document.getElementById('article-overlay').addEventListener('click', (e) => {
+            if (e.target.id === 'article-overlay') {
+                hideArticle();
+            }
+        });
+
+        async function loadArticle() {
+            const content = document.getElementById('article-content');
+            content.innerHTML = '<p style="text-align: center; padding: 40px;">Loading...</p>';
+
+            try {
+                const response = await fetch('/api/article');
+                const data = await response.json();
+                content.innerHTML = data.html;
+                articleLoaded = true;
+            } catch (error) {
+                content.innerHTML = '<p style="color: #ff6b6b;">Failed to load article. Please try again.</p>';
+            }
+        }
     </script>
 </body>
 </html>
