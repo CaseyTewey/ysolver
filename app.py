@@ -239,10 +239,10 @@ def compute_win_probability(score1, ev1, cats_remaining1, score2, ev2, cats_rema
 
     return p1_win, p_tie, p2_win
 
-# Preload solver on startup
+# Preload solver on startup (joker mode only)
 print("Loading solver...")
-_ = get_expected_score_fresh_game()
-print(f"Solver ready! Fresh game EV: {_:.2f}")
+_ = get_expected_score_fresh_game_joker()
+print(f"Solver ready! Fresh game EV (Joker): {_:.2f}")
 
 SCORE_TABLE = get_score_table()
 
