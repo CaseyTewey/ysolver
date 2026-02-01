@@ -1,0 +1,6269 @@
+[
+  {
+    "timestamp": "2026-01-25T03:50:25.442Z",
+    "player1_score": 269,
+    "player2_score": 216,
+    "winner": 1,
+    "turns": [
+      {
+        "turn": 1,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              1,
+              3,
+              5,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 0,
+                  "expected_value": 235.43803067635992,
+                  "name": "Ones",
+                  "points": 2
+                },
+                {
+                  "category": 7,
+                  "expected_value": 229.113321316906,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 11,
+                  "expected_value": 228.2085839541214,
+                  "name": "Yahtzee",
+                  "points": 0
+                },
+                {
+                  "category": 12,
+                  "expected_value": 227.68605328620257,
+                  "name": "Chance",
+                  "points": 15
+                },
+                {
+                  "category": 4,
+                  "expected_value": 227.60471938944713,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 2,
+                  "expected_value": 224.74302152618642,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 1,
+                  "expected_value": 224.04149424859065,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 221.41512559799727,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                1,
+                3,
+                5,
+                5
+              ],
+              "expected_value": 244.79,
+              "keep_dice": [
+                5,
+                5
+              ],
+              "mask": 0,
+              "reroll": [
+                1,
+                1,
+                3
+              ],
+              "rolls_remaining": 2,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:31:05.108Z"
+          },
+          {
+            "dice": [
+              2,
+              3,
+              5,
+              5,
+              5
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 242.83086288512115,
+                  "name": "Fives",
+                  "points": 15
+                },
+                {
+                  "category": 6,
+                  "expected_value": 238.86779383975488,
+                  "name": "Three of a Kind",
+                  "points": 20
+                },
+                {
+                  "category": 12,
+                  "expected_value": 232.68605328620257,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 0,
+                  "expected_value": 229.94727225419106,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 229.28028638582106,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 7,
+                  "expected_value": 229.113321316906,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 11,
+                  "expected_value": 228.2085839541214,
+                  "name": "Yahtzee",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 224.74302152618642,
+                  "name": "Threes",
+                  "points": 3
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                5,
+                5,
+                5
+              ],
+              "expected_value": 248.41,
+              "keep_dice": [
+                5,
+                5,
+                5
+              ],
+              "mask": 0,
+              "reroll": [
+                2,
+                3
+              ],
+              "rolls_remaining": 1,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:31:15.047Z"
+          },
+          {
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              5
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 11,
+              "category_name": "Yahtzee",
+              "category_options": [
+                {
+                  "category": 11,
+                  "expected_value": 278.2085839541214,
+                  "name": "Yahtzee",
+                  "points": 50
+                },
+                {
+                  "category": 4,
+                  "expected_value": 267.7497595175954,
+                  "name": "Fives",
+                  "points": 25
+                },
+                {
+                  "category": 7,
+                  "expected_value": 254.113321316906,
+                  "name": "Four of a Kind",
+                  "points": 25
+                },
+                {
+                  "category": 6,
+                  "expected_value": 243.86779383975488,
+                  "name": "Three of a Kind",
+                  "points": 25
+                },
+                {
+                  "category": 12,
+                  "expected_value": 237.68605328620257,
+                  "name": "Chance",
+                  "points": 25
+                },
+                {
+                  "category": 0,
+                  "expected_value": 229.94727225419106,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 224.04149424859065,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 221.41512559799727,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                5,
+                5,
+                5
+              ],
+              "expected_value": 278.21,
+              "mask": 0,
+              "points": 50,
+              "rolls_remaining": 0,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:31:23.811Z"
+          }
+        ],
+        "finalCategory": "Yahtzee",
+        "finalPoints": 50,
+        "optimalEV": 278.2085839541214,
+        "actualEV": 278.2085839541214,
+        "evLoss": 0
+      },
+      {
+        "turn": 2,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              4,
+              4,
+              4,
+              5,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 246.41512559799727,
+                  "name": "Full House",
+                  "points": 25
+                },
+                {
+                  "category": 3,
+                  "expected_value": 242.3691414657808,
+                  "name": "Fours",
+                  "points": 12
+                },
+                {
+                  "category": 6,
+                  "expected_value": 240.86779383975488,
+                  "name": "Three of a Kind",
+                  "points": 22
+                },
+                {
+                  "category": 12,
+                  "expected_value": 234.68605328620257,
+                  "name": "Chance",
+                  "points": 22
+                },
+                {
+                  "category": 0,
+                  "expected_value": 229.94727225419106,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 229.113321316906,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 11,
+                  "expected_value": 228.2085839541214,
+                  "name": "Yahtzee",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 227.60471938944713,
+                  "name": "Fives",
+                  "points": 10
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                4,
+                5,
+                5
+              ],
+              "expected_value": 251.07,
+              "keep_dice": [
+                4,
+                4,
+                4
+              ],
+              "mask": 0,
+              "reroll": [
+                5,
+                5
+              ],
+              "rolls_remaining": 2,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:31:46.224Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              4,
+              5,
+              3
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 3,
+                  "expected_value": 242.3691414657808,
+                  "name": "Fours",
+                  "points": 12
+                },
+                {
+                  "category": 6,
+                  "expected_value": 238.86779383975488,
+                  "name": "Three of a Kind",
+                  "points": 20
+                },
+                {
+                  "category": 12,
+                  "expected_value": 232.68605328620257,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 0,
+                  "expected_value": 229.94727225419106,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 229.113321316906,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 11,
+                  "expected_value": 228.2085839541214,
+                  "name": "Yahtzee",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 224.74302152618642,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 1,
+                  "expected_value": 224.04149424859065,
+                  "name": "Twos",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                4,
+                5,
+                3
+              ],
+              "expected_value": 247.18,
+              "keep_dice": [
+                4,
+                4,
+                4
+              ],
+              "mask": 0,
+              "reroll": [
+                5,
+                3
+              ],
+              "rolls_remaining": 1,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:31:54.242Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              4,
+              4,
+              4
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 11,
+              "category_name": "Yahtzee",
+              "category_options": [
+                {
+                  "category": 11,
+                  "expected_value": 278.2085839541214,
+                  "name": "Yahtzee",
+                  "points": 50
+                },
+                {
+                  "category": 3,
+                  "expected_value": 262.8962798904523,
+                  "name": "Fours",
+                  "points": 20
+                },
+                {
+                  "category": 7,
+                  "expected_value": 249.113321316906,
+                  "name": "Four of a Kind",
+                  "points": 20
+                },
+                {
+                  "category": 6,
+                  "expected_value": 238.86779383975488,
+                  "name": "Three of a Kind",
+                  "points": 20
+                },
+                {
+                  "category": 12,
+                  "expected_value": 232.68605328620257,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 0,
+                  "expected_value": 229.94727225419106,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 224.04149424859065,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 221.41512559799727,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                4,
+                4,
+                4
+              ],
+              "expected_value": 278.21,
+              "mask": 0,
+              "points": 50,
+              "rolls_remaining": 0,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:31:59.430Z"
+          }
+        ],
+        "finalCategory": "Yahtzee",
+        "finalPoints": 50,
+        "optimalEV": 278.2085839541214,
+        "actualEV": 278.2085839541214,
+        "evLoss": 0
+      },
+      {
+        "turn": 3,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 10,
+                  "expected_value": 236.5180485988847,
+                  "name": "Large Straight",
+                  "points": 40
+                },
+                {
+                  "category": 9,
+                  "expected_value": 221.75862246767988,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 12,
+                  "expected_value": 215.55967369026962,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 0,
+                  "expected_value": 213.6012389621995,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 213.20714343704998,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 7,
+                  "expected_value": 212.50261659774114,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 209.20294847713353,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 3,
+                  "expected_value": 205.4004118927848,
+                  "name": "Fours",
+                  "points": 4
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "expected_value": 236.52,
+              "keep_dice": [
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "mask": 2048,
+              "reroll": [],
+              "rolls_remaining": 2,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:32:17.532Z"
+          }
+        ],
+        "finalCategory": "Large Straight",
+        "finalPoints": 40,
+        "optimalEV": 236.5180485988847,
+        "actualEV": 236.5180485988847,
+        "evLoss": 0
+      },
+      {
+        "turn": 4,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              2,
+              3,
+              4,
+              4,
+              6
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 214.55967369026962,
+                  "name": "Chance",
+                  "points": 19
+                },
+                {
+                  "category": 3,
+                  "expected_value": 214.34527013726944,
+                  "name": "Fours",
+                  "points": 8
+                },
+                {
+                  "category": 0,
+                  "expected_value": 213.6012389621995,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 213.20714343704998,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 7,
+                  "expected_value": 212.50261659774114,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 209.20294847713353,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 8,
+                  "expected_value": 204.66761588396784,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 202.04823375822693,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                4,
+                4,
+                6
+              ],
+              "expected_value": 226.61,
+              "keep_dice": [
+                4,
+                4
+              ],
+              "mask": 2048,
+              "reroll": [
+                2,
+                3,
+                6
+              ],
+              "rolls_remaining": 2,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:32:38.996Z"
+          },
+          {
+            "dice": [
+              3,
+              6,
+              4,
+              4,
+              6
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 218.55967369026962,
+                  "name": "Chance",
+                  "points": 23
+                },
+                {
+                  "category": 3,
+                  "expected_value": 214.34527013726944,
+                  "name": "Fours",
+                  "points": 8
+                },
+                {
+                  "category": 0,
+                  "expected_value": 213.6012389621995,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 212.50261659774114,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 209.31441896021522,
+                  "name": "Sixes",
+                  "points": 12
+                },
+                {
+                  "category": 2,
+                  "expected_value": 209.20294847713353,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 1,
+                  "expected_value": 208.46169395489218,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 204.66761588396784,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                3,
+                6,
+                4,
+                4,
+                6
+              ],
+              "expected_value": 223.4,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 2048,
+              "reroll": [
+                3,
+                4,
+                4
+              ],
+              "rolls_remaining": 1,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:32:47.141Z"
+          },
+          {
+            "dice": [
+              2,
+              6,
+              2,
+              5,
+              6
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 1,
+              "category_name": "Twos",
+              "category_options": [
+                {
+                  "category": 1,
+                  "expected_value": 218.3163834930887,
+                  "name": "Twos",
+                  "points": 4
+                },
+                {
+                  "category": 12,
+                  "expected_value": 216.55967369026962,
+                  "name": "Chance",
+                  "points": 21
+                },
+                {
+                  "category": 0,
+                  "expected_value": 213.6012389621995,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 212.50261659774114,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 209.31441896021522,
+                  "name": "Sixes",
+                  "points": 12
+                },
+                {
+                  "category": 8,
+                  "expected_value": 204.66761588396784,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 203.35859508805729,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 202.18407992232562,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                2,
+                6,
+                2,
+                5,
+                6
+              ],
+              "expected_value": 218.32,
+              "mask": 2048,
+              "points": 4,
+              "rolls_remaining": 0,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:32:55.298Z"
+          }
+        ],
+        "finalCategory": "Twos",
+        "finalPoints": 4,
+        "optimalEV": 218.3163834930887,
+        "actualEV": 218.3163834930887,
+        "evLoss": 0
+      },
+      {
+        "turn": 5,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              2,
+              3,
+              3,
+              4,
+              6
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 185.52678354909892,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 0,
+                  "expected_value": 182.61342482415364,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 12,
+                  "expected_value": 182.59309711196246,
+                  "name": "Chance",
+                  "points": 18
+                },
+                {
+                  "category": 1,
+                  "expected_value": 182.1965786715849,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 7,
+                  "expected_value": 181.3534121700466,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 173.6277783234461,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 8,
+                  "expected_value": 173.36151265905823,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 170.81304841673378,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                3,
+                4,
+                6
+              ],
+              "expected_value": 194.74,
+              "keep_dice": [
+                3,
+                3
+              ],
+              "mask": 3072,
+              "reroll": [
+                2,
+                4,
+                6
+              ],
+              "rolls_remaining": 2,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:33:21.656Z"
+          },
+          {
+            "dice": [
+              1,
+              3,
+              3,
+              1,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 0,
+                  "expected_value": 187.76298963339568,
+                  "name": "Ones",
+                  "points": 2
+                },
+                {
+                  "category": 2,
+                  "expected_value": 185.52678354909892,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 1,
+                  "expected_value": 182.1965786715849,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 7,
+                  "expected_value": 181.3534121700466,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 12,
+                  "expected_value": 174.59309711196246,
+                  "name": "Chance",
+                  "points": 10
+                },
+                {
+                  "category": 8,
+                  "expected_value": 173.36151265905823,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 170.81304841673378,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 167.07911493739576,
+                  "name": "Fours",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                3,
+                3,
+                1,
+                2
+              ],
+              "expected_value": 191.3,
+              "keep_dice": [
+                1,
+                1,
+                3,
+                3
+              ],
+              "mask": 3072,
+              "reroll": [
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:33:34.394Z"
+          },
+          {
+            "dice": [
+              1,
+              3,
+              3,
+              1,
+              6
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 0,
+              "category_name": "Ones",
+              "category_options": [
+                {
+                  "category": 0,
+                  "expected_value": 187.76298963339568,
+                  "name": "Ones",
+                  "points": 2
+                },
+                {
+                  "category": 2,
+                  "expected_value": 185.52678354909892,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 7,
+                  "expected_value": 181.3534121700466,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 12,
+                  "expected_value": 178.59309711196246,
+                  "name": "Chance",
+                  "points": 14
+                },
+                {
+                  "category": 1,
+                  "expected_value": 177.2823016644591,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 173.36151265905823,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 170.81304841673378,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 167.62169800794663,
+                  "name": "Sixes",
+                  "points": 6
+                }
+              ],
+              "dice": [
+                1,
+                3,
+                3,
+                1,
+                6
+              ],
+              "expected_value": 187.76,
+              "mask": 3072,
+              "points": 2,
+              "rolls_remaining": 0,
+              "upper": 0
+            },
+            "timestamp": "2026-01-25T03:33:50.677Z"
+          }
+        ],
+        "finalCategory": "Ones",
+        "finalPoints": 2,
+        "optimalEV": 187.76298963339568,
+        "actualEV": 187.76298963339568,
+        "evLoss": 0
+      },
+      {
+        "turn": 6,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              6,
+              4,
+              1
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 5,
+                  "expected_value": 211.59334799591062,
+                  "name": "Sixes",
+                  "points": 18
+                },
+                {
+                  "category": 6,
+                  "expected_value": 211.17550387686197,
+                  "name": "Three of a Kind",
+                  "points": 23
+                },
+                {
+                  "category": 12,
+                  "expected_value": 204.65855302263452,
+                  "name": "Chance",
+                  "points": 23
+                },
+                {
+                  "category": 0,
+                  "expected_value": 201.92028745480062,
+                  "name": "Ones",
+                  "points": 1
+                },
+                {
+                  "category": 7,
+                  "expected_value": 198.78966856431862,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 193.69582991783068,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 2,
+                  "expected_value": 191.71658639417794,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 191.20708837398982,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                6,
+                4,
+                1
+              ],
+              "expected_value": 223.49,
+              "keep_dice": [
+                6,
+                6,
+                6
+              ],
+              "mask": 2050,
+              "reroll": [
+                4,
+                1
+              ],
+              "rolls_remaining": 2,
+              "upper": 4
+            },
+            "timestamp": "2026-01-25T03:34:13.276Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              6,
+              6,
+              4
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 5,
+                  "expected_value": 230.3875881473099,
+                  "name": "Sixes",
+                  "points": 24
+                },
+                {
+                  "category": 7,
+                  "expected_value": 226.78966856431862,
+                  "name": "Four of a Kind",
+                  "points": 28
+                },
+                {
+                  "category": 6,
+                  "expected_value": 216.17550387686197,
+                  "name": "Three of a Kind",
+                  "points": 28
+                },
+                {
+                  "category": 12,
+                  "expected_value": 209.65855302263452,
+                  "name": "Chance",
+                  "points": 28
+                },
+                {
+                  "category": 0,
+                  "expected_value": 199.7430511084801,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 193.69582991783068,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 2,
+                  "expected_value": 191.71658639417794,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 191.20708837398982,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                6,
+                6,
+                4
+              ],
+              "expected_value": 232.73,
+              "keep_dice": [
+                6,
+                6,
+                6,
+                6
+              ],
+              "mask": 2050,
+              "reroll": [
+                4
+              ],
+              "rolls_remaining": 1,
+              "upper": 4
+            },
+            "timestamp": "2026-01-25T03:34:23.217Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              6,
+              6,
+              3
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 5,
+              "category_name": "Sixes",
+              "category_options": [
+                {
+                  "category": 5,
+                  "expected_value": 230.3875881473099,
+                  "name": "Sixes",
+                  "points": 24
+                },
+                {
+                  "category": 7,
+                  "expected_value": 225.78966856431862,
+                  "name": "Four of a Kind",
+                  "points": 27
+                },
+                {
+                  "category": 6,
+                  "expected_value": 215.17550387686197,
+                  "name": "Three of a Kind",
+                  "points": 27
+                },
+                {
+                  "category": 12,
+                  "expected_value": 208.65855302263452,
+                  "name": "Chance",
+                  "points": 27
+                },
+                {
+                  "category": 0,
+                  "expected_value": 199.7430511084801,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 196.54429396201476,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 8,
+                  "expected_value": 191.20708837398982,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 188.4733532613015,
+                  "name": "Fours",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                6,
+                6,
+                3
+              ],
+              "expected_value": 230.39,
+              "mask": 2050,
+              "points": 24,
+              "rolls_remaining": 0,
+              "upper": 4
+            },
+            "timestamp": "2026-01-25T03:34:28.798Z"
+          }
+        ],
+        "finalCategory": "Sixes",
+        "finalPoints": 24,
+        "optimalEV": 230.3875881473099,
+        "actualEV": 230.3875881473099,
+        "evLoss": 0
+      },
+      {
+        "turn": 7,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              1,
+              3,
+              3,
+              4
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 175.08946041203495,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 7,
+                  "expected_value": 170.891166747076,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 167.4399371718155,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 12,
+                  "expected_value": 165.63335071537549,
+                  "name": "Chance",
+                  "points": 12
+                },
+                {
+                  "category": 3,
+                  "expected_value": 165.0797999955066,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 8,
+                  "expected_value": 163.19769226395246,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 160.31965964348927,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 156.55551319631837,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                1,
+                3,
+                3,
+                4
+              ],
+              "expected_value": 183.91,
+              "keep_dice": [
+                3,
+                3
+              ],
+              "mask": 3073,
+              "reroll": [
+                1,
+                1,
+                4
+              ],
+              "rolls_remaining": 2,
+              "upper": 2
+            },
+            "timestamp": "2026-01-25T03:34:45.814Z"
+          },
+          {
+            "dice": [
+              3,
+              3,
+              3,
+              3,
+              6
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 191.3665347957395,
+                  "name": "Threes",
+                  "points": 12
+                },
+                {
+                  "category": 7,
+                  "expected_value": 188.891166747076,
+                  "name": "Four of a Kind",
+                  "points": 18
+                },
+                {
+                  "category": 6,
+                  "expected_value": 178.31965964348927,
+                  "name": "Three of a Kind",
+                  "points": 18
+                },
+                {
+                  "category": 12,
+                  "expected_value": 171.63335071537549,
+                  "name": "Chance",
+                  "points": 18
+                },
+                {
+                  "category": 1,
+                  "expected_value": 167.4399371718155,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 163.19769226395246,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 160.5625532273913,
+                  "name": "Sixes",
+                  "points": 6
+                },
+                {
+                  "category": 3,
+                  "expected_value": 159.4808857588559,
+                  "name": "Fours",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                3,
+                3,
+                3,
+                3,
+                6
+              ],
+              "expected_value": 192.56,
+              "keep_dice": [
+                3,
+                3,
+                3,
+                3
+              ],
+              "mask": 3073,
+              "reroll": [
+                6
+              ],
+              "rolls_remaining": 1,
+              "upper": 2
+            },
+            "timestamp": "2026-01-25T03:34:56.665Z"
+          },
+          {
+            "dice": [
+              3,
+              3,
+              3,
+              3,
+              6
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 2,
+              "category_name": "Threes",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 191.3665347957395,
+                  "name": "Threes",
+                  "points": 12
+                },
+                {
+                  "category": 7,
+                  "expected_value": 188.891166747076,
+                  "name": "Four of a Kind",
+                  "points": 18
+                },
+                {
+                  "category": 6,
+                  "expected_value": 178.31965964348927,
+                  "name": "Three of a Kind",
+                  "points": 18
+                },
+                {
+                  "category": 12,
+                  "expected_value": 171.63335071537549,
+                  "name": "Chance",
+                  "points": 18
+                },
+                {
+                  "category": 1,
+                  "expected_value": 167.4399371718155,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 163.19769226395246,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 160.5625532273913,
+                  "name": "Sixes",
+                  "points": 6
+                },
+                {
+                  "category": 3,
+                  "expected_value": 159.4808857588559,
+                  "name": "Fours",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                3,
+                3,
+                3,
+                3,
+                6
+              ],
+              "expected_value": 191.37,
+              "mask": 3073,
+              "points": 12,
+              "rolls_remaining": 0,
+              "upper": 2
+            },
+            "timestamp": "2026-01-25T03:35:02.214Z"
+          }
+        ],
+        "finalCategory": "Threes",
+        "finalPoints": 12,
+        "optimalEV": 191.3665347957395,
+        "actualEV": 191.3665347957395,
+        "evLoss": 0
+      },
+      {
+        "turn": 8,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              2,
+              1
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 193.34138890859674,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 0,
+                  "expected_value": 192.65942248750304,
+                  "name": "Ones",
+                  "points": 1
+                },
+                {
+                  "category": 7,
+                  "expected_value": 189.26630701936617,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 183.96860049921642,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 179.9475334078762,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 10,
+                  "expected_value": 176.27329535399394,
+                  "name": "Large Straight",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 174.7974654432864,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 172.8765875460062,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                2,
+                1
+              ],
+              "expected_value": 204.93,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 2082,
+              "reroll": [
+                5,
+                2,
+                1
+              ],
+              "rolls_remaining": 2,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:35:28.359Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              5,
+              3
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 198.34138890859674,
+                  "name": "Chance",
+                  "points": 25
+                },
+                {
+                  "category": 0,
+                  "expected_value": 189.9708084275073,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 189.26630701936617,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 186.6869255819329,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 2,
+                  "expected_value": 184.33783133319537,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 8,
+                  "expected_value": 183.96860049921642,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 179.9475334078762,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 10,
+                  "expected_value": 176.27329535399394,
+                  "name": "Large Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                5,
+                3
+              ],
+              "expected_value": 201.55,
+              "keep_dice": [
+                5,
+                5,
+                6,
+                6
+              ],
+              "mask": 2082,
+              "reroll": [
+                3
+              ],
+              "rolls_remaining": 1,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:35:35.555Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              5,
+              2
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 12,
+              "category_name": "Chance",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 197.34138890859674,
+                  "name": "Chance",
+                  "points": 24
+                },
+                {
+                  "category": 0,
+                  "expected_value": 189.9708084275073,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 189.26630701936617,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 186.6869255819329,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 8,
+                  "expected_value": 183.96860049921642,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 179.9475334078762,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 10,
+                  "expected_value": 176.27329535399394,
+                  "name": "Large Straight",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 174.7974654432864,
+                  "name": "Threes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                5,
+                2
+              ],
+              "expected_value": 197.34,
+              "mask": 2082,
+              "points": 24,
+              "rolls_remaining": 0,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:35:42.318Z"
+          }
+        ],
+        "finalCategory": "Chance",
+        "finalPoints": 24,
+        "optimalEV": 197.34138890859674,
+        "actualEV": 197.34138890859674,
+        "evLoss": 0
+      },
+      {
+        "turn": 9,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              4,
+              4,
+              1
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 167.42065595509763,
+                  "name": "Chance",
+                  "points": 21
+                },
+                {
+                  "category": 3,
+                  "expected_value": 166.09242195568993,
+                  "name": "Fours",
+                  "points": 8
+                },
+                {
+                  "category": 7,
+                  "expected_value": 163.80197155416482,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 160.59889253404802,
+                  "name": "Sixes",
+                  "points": 12
+                },
+                {
+                  "category": 1,
+                  "expected_value": 158.97532595983282,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 157.6185320211536,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 154.42447168860068,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 146.31666236544942,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                4,
+                4,
+                1
+              ],
+              "expected_value": 180.87,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 3077,
+              "reroll": [
+                4,
+                4,
+                1
+              ],
+              "rolls_remaining": 2,
+              "upper": 14
+            },
+            "timestamp": "2026-01-25T03:36:32.138Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              4,
+              3
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 9,
+                  "expected_value": 176.31666236544942,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 12,
+                  "expected_value": 170.42065595509763,
+                  "name": "Chance",
+                  "points": 24
+                },
+                {
+                  "category": 7,
+                  "expected_value": 163.80197155416482,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 160.59889253404802,
+                  "name": "Sixes",
+                  "points": 12
+                },
+                {
+                  "category": 1,
+                  "expected_value": 158.97532595983282,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 157.6185320211536,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 155.54107510026498,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 6,
+                  "expected_value": 154.42447168860068,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                4,
+                3
+              ],
+              "expected_value": 176.32,
+              "keep_dice": [
+                3,
+                4,
+                5,
+                6
+              ],
+              "mask": 3077,
+              "reroll": [
+                6
+              ],
+              "rolls_remaining": 1,
+              "upper": 14
+            },
+            "timestamp": "2026-01-25T03:36:41.901Z"
+          },
+          {
+            "dice": [
+              6,
+              2,
+              5,
+              4,
+              3
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 9,
+              "category_name": "Small Straight",
+              "category_options": [
+                {
+                  "category": 9,
+                  "expected_value": 176.31666236544942,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 12,
+                  "expected_value": 166.42065595509763,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 7,
+                  "expected_value": 163.80197155416482,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 163.28589737875737,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 8,
+                  "expected_value": 157.6185320211536,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 155.54107510026498,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 6,
+                  "expected_value": 154.42447168860068,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 152.36190971267163,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                6,
+                2,
+                5,
+                4,
+                3
+              ],
+              "expected_value": 176.32,
+              "mask": 3077,
+              "points": 30,
+              "rolls_remaining": 0,
+              "upper": 14
+            },
+            "timestamp": "2026-01-25T03:37:15.619Z"
+          }
+        ],
+        "finalCategory": "Small Straight",
+        "finalPoints": 30,
+        "optimalEV": 176.31666236544942,
+        "actualEV": 176.31666236544942,
+        "evLoss": 0
+      },
+      {
+        "turn": 10,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              2,
+              3,
+              3,
+              4,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 9,
+                  "expected_value": 166.66293099540783,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 2,
+                  "expected_value": 161.3642029861363,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 7,
+                  "expected_value": 156.3111168706936,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 0,
+                  "expected_value": 155.9101618195902,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 151.43278107845086,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 147.05116712476547,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 146.51250134391944,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 10,
+                  "expected_value": 144.3066120735459,
+                  "name": "Large Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                3,
+                4,
+                5
+              ],
+              "expected_value": 176.46,
+              "keep_dice": [
+                2,
+                3,
+                4,
+                5
+              ],
+              "mask": 6178,
+              "reroll": [
+                3
+              ],
+              "rolls_remaining": 2,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:37:31.258Z"
+          },
+          {
+            "dice": [
+              2,
+              3,
+              3,
+              4,
+              5
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 9,
+                  "expected_value": 166.66293099540783,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 2,
+                  "expected_value": 161.3642029861363,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 7,
+                  "expected_value": 156.3111168706936,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 0,
+                  "expected_value": 155.9101618195902,
+                  "name": "Ones",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 151.43278107845086,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 147.05116712476547,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 146.51250134391944,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 10,
+                  "expected_value": 144.3066120735459,
+                  "name": "Large Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                3,
+                4,
+                5
+              ],
+              "expected_value": 172.54,
+              "keep_dice": [
+                2,
+                3,
+                4,
+                5
+              ],
+              "mask": 6178,
+              "reroll": [
+                3
+              ],
+              "rolls_remaining": 1,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:37:38.897Z"
+          },
+          {
+            "dice": [
+              2,
+              3,
+              1,
+              4,
+              5
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 10,
+              "category_name": "Large Straight",
+              "category_options": [
+                {
+                  "category": 10,
+                  "expected_value": 184.3066120735459,
+                  "name": "Large Straight",
+                  "points": 40
+                },
+                {
+                  "category": 9,
+                  "expected_value": 166.66293099540783,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 0,
+                  "expected_value": 158.79208674218438,
+                  "name": "Ones",
+                  "points": 1
+                },
+                {
+                  "category": 7,
+                  "expected_value": 156.3111168706936,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 151.552033840337,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 8,
+                  "expected_value": 151.43278107845086,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 147.05116712476547,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 146.51250134391944,
+                  "name": "Fours",
+                  "points": 4
+                }
+              ],
+              "dice": [
+                2,
+                3,
+                1,
+                4,
+                5
+              ],
+              "expected_value": 184.31,
+              "mask": 6178,
+              "points": 40,
+              "rolls_remaining": 0,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:37:54.140Z"
+          }
+        ],
+        "finalCategory": "Large Straight",
+        "finalPoints": 40,
+        "optimalEV": 184.3066120735459,
+        "actualEV": 184.3066120735459,
+        "evLoss": 0
+      },
+      {
+        "turn": 11,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              5,
+              5,
+              5,
+              4,
+              3
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 147.79013181108593,
+                  "name": "Fives",
+                  "points": 15
+                },
+                {
+                  "category": 6,
+                  "expected_value": 143.7444119243,
+                  "name": "Three of a Kind",
+                  "points": 22
+                },
+                {
+                  "category": 12,
+                  "expected_value": 135.5535334391139,
+                  "name": "Chance",
+                  "points": 22
+                },
+                {
+                  "category": 7,
+                  "expected_value": 131.18076563181177,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 126.24998231333818,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 124.93498260419189,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 123.54592041885124,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 5,
+                  "expected_value": 111.55490924480614,
+                  "name": "Sixes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                5,
+                4,
+                3
+              ],
+              "expected_value": 155.25,
+              "keep_dice": [
+                5,
+                5,
+                5
+              ],
+              "mask": 3589,
+              "reroll": [
+                4,
+                3
+              ],
+              "rolls_remaining": 2,
+              "upper": 14
+            },
+            "timestamp": "2026-01-25T03:38:08.920Z"
+          },
+          {
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 159.75066110321583,
+                  "name": "Fives",
+                  "points": 20
+                },
+                {
+                  "category": 7,
+                  "expected_value": 153.18076563181177,
+                  "name": "Four of a Kind",
+                  "points": 22
+                },
+                {
+                  "category": 6,
+                  "expected_value": 143.7444119243,
+                  "name": "Three of a Kind",
+                  "points": 22
+                },
+                {
+                  "category": 12,
+                  "expected_value": 135.5535334391139,
+                  "name": "Chance",
+                  "points": 22
+                },
+                {
+                  "category": 1,
+                  "expected_value": 130.52922766948888,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 8,
+                  "expected_value": 124.93498260419189,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 117.02848975955128,
+                  "name": "Fours",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 111.55490924480614,
+                  "name": "Sixes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                5,
+                5,
+                2
+              ],
+              "expected_value": 161.64,
+              "keep_dice": [
+                5,
+                5,
+                5,
+                5
+              ],
+              "mask": 3589,
+              "reroll": [
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 14
+            },
+            "timestamp": "2026-01-25T03:38:17.077Z"
+          },
+          {
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              4
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 4,
+              "category_name": "Fives",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 159.75066110321583,
+                  "name": "Fives",
+                  "points": 20
+                },
+                {
+                  "category": 7,
+                  "expected_value": 155.18076563181177,
+                  "name": "Four of a Kind",
+                  "points": 24
+                },
+                {
+                  "category": 6,
+                  "expected_value": 145.7444119243,
+                  "name": "Three of a Kind",
+                  "points": 24
+                },
+                {
+                  "category": 12,
+                  "expected_value": 137.5535334391139,
+                  "name": "Chance",
+                  "points": 24
+                },
+                {
+                  "category": 1,
+                  "expected_value": 126.24998231333818,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 124.93498260419189,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 123.54592041885124,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 5,
+                  "expected_value": 111.55490924480614,
+                  "name": "Sixes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                5,
+                5,
+                4
+              ],
+              "expected_value": 159.75,
+              "mask": 3589,
+              "points": 20,
+              "rolls_remaining": 0,
+              "upper": 14
+            },
+            "timestamp": "2026-01-25T03:38:22.754Z"
+          }
+        ],
+        "finalCategory": "Fives",
+        "finalPoints": 20,
+        "optimalEV": 159.75066110321583,
+        "actualEV": 159.75066110321583,
+        "evLoss": 0
+      },
+      {
+        "turn": 12,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              1,
+              1,
+              2,
+              4
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 0,
+                  "expected_value": 138.21372108928807,
+                  "name": "Ones",
+                  "points": 3
+                },
+                {
+                  "category": 7,
+                  "expected_value": 128.19725785806625,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 127.48907219267026,
+                  "name": "Three of a Kind",
+                  "points": 9
+                },
+                {
+                  "category": 8,
+                  "expected_value": 123.02798171902012,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 118.19188130147384,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 2,
+                  "expected_value": 115.2167913728553,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 111.45214372845194,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 107.71291723516069,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                1,
+                1,
+                2,
+                4
+              ],
+              "expected_value": 141.79,
+              "keep_dice": [
+                1,
+                1,
+                1,
+                4
+              ],
+              "mask": 7202,
+              "reroll": [
+                2
+              ],
+              "rolls_remaining": 2,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:38:38.433Z"
+          },
+          {
+            "dice": [
+              1,
+              1,
+              1,
+              3,
+              4
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 0,
+                  "expected_value": 138.21372108928807,
+                  "name": "Ones",
+                  "points": 3
+                },
+                {
+                  "category": 6,
+                  "expected_value": 128.48907219267028,
+                  "name": "Three of a Kind",
+                  "points": 10
+                },
+                {
+                  "category": 7,
+                  "expected_value": 128.19725785806625,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 123.45832608564231,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 8,
+                  "expected_value": 123.02798171902012,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 118.19188130147384,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 9,
+                  "expected_value": 111.45214372845194,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 107.71291723516069,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                1,
+                1,
+                3,
+                4
+              ],
+              "expected_value": 140.41,
+              "keep_dice": [
+                1,
+                1,
+                1
+              ],
+              "mask": 7202,
+              "reroll": [
+                3,
+                4
+              ],
+              "rolls_remaining": 1,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:39:06.849Z"
+          },
+          {
+            "dice": [
+              1,
+              1,
+              1,
+              2,
+              5
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 0,
+              "category_name": "Ones",
+              "category_options": [
+                {
+                  "category": 0,
+                  "expected_value": 138.21372108928807,
+                  "name": "Ones",
+                  "points": 3
+                },
+                {
+                  "category": 6,
+                  "expected_value": 128.48907219267028,
+                  "name": "Three of a Kind",
+                  "points": 10
+                },
+                {
+                  "category": 7,
+                  "expected_value": 128.19725785806625,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 123.02798171902012,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 115.2167913728553,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 113.84907839782254,
+                  "name": "Fives",
+                  "points": 5
+                },
+                {
+                  "category": 9,
+                  "expected_value": 111.45214372845194,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 110.82189583544877,
+                  "name": "Fours",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                1,
+                1,
+                2,
+                5
+              ],
+              "expected_value": 138.21,
+              "mask": 7202,
+              "points": 3,
+              "rolls_remaining": 0,
+              "upper": 28
+            },
+            "timestamp": "2026-01-25T03:39:15.980Z"
+          }
+        ],
+        "finalCategory": "Ones",
+        "finalPoints": 3,
+        "optimalEV": 138.21372108928807,
+        "actualEV": 138.21372108928807,
+        "evLoss": 0
+      },
+      {
+        "turn": 13,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 124.32130599490094,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 123.86135668195287,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 12,
+                  "expected_value": 122.77206372271117,
+                  "name": "Chance",
+                  "points": 15
+                },
+                {
+                  "category": 8,
+                  "expected_value": 118.91949466167488,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 115.00608502607872,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 114.04382369941654,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 5,
+                  "expected_value": 95.5068500706038,
+                  "name": "Sixes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "expected_value": 136.28,
+              "keep_dice": [
+                4
+              ],
+              "mask": 3605,
+              "reroll": [
+                1,
+                2,
+                3,
+                5
+              ],
+              "rolls_remaining": 2,
+              "upper": 34
+            },
+            "timestamp": "2026-01-25T03:39:37.916Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              5,
+              4,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 3,
+                  "expected_value": 139.05543420873664,
+                  "name": "Fours",
+                  "points": 12
+                },
+                {
+                  "category": 6,
+                  "expected_value": 134.00608502607872,
+                  "name": "Three of a Kind",
+                  "points": 19
+                },
+                {
+                  "category": 12,
+                  "expected_value": 126.77206372271117,
+                  "name": "Chance",
+                  "points": 19
+                },
+                {
+                  "category": 7,
+                  "expected_value": 124.32130599490094,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 123.86135668195287,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 8,
+                  "expected_value": 118.91949466167488,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 95.5068500706038,
+                  "name": "Sixes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                5,
+                4,
+                2
+              ],
+              "expected_value": 142.9,
+              "keep_dice": [
+                4,
+                4,
+                4
+              ],
+              "mask": 3605,
+              "reroll": [
+                5,
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 34
+            },
+            "timestamp": "2026-01-25T03:39:52.146Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              5,
+              4,
+              1
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 3,
+              "category_name": "Fours",
+              "category_options": [
+                {
+                  "category": 3,
+                  "expected_value": 139.05543420873664,
+                  "name": "Fours",
+                  "points": 12
+                },
+                {
+                  "category": 6,
+                  "expected_value": 133.00608502607872,
+                  "name": "Three of a Kind",
+                  "points": 18
+                },
+                {
+                  "category": 12,
+                  "expected_value": 125.77206372271117,
+                  "name": "Chance",
+                  "points": 18
+                },
+                {
+                  "category": 7,
+                  "expected_value": 124.32130599490094,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 1,
+                  "expected_value": 119.88500242594358,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 118.91949466167488,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 5,
+                  "expected_value": 95.5068500706038,
+                  "name": "Sixes",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                5,
+                4,
+                1
+              ],
+              "expected_value": 139.06,
+              "mask": 3605,
+              "points": 12,
+              "rolls_remaining": 0,
+              "upper": 34
+            },
+            "timestamp": "2026-01-25T03:39:58.941Z"
+          }
+        ],
+        "finalCategory": "Fours",
+        "finalPoints": 12,
+        "optimalEV": 139.05543420873664,
+        "actualEV": 139.05543420873664,
+        "evLoss": 0
+      },
+      {
+        "turn": 14,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              2,
+              4,
+              5,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 118.605548230428,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 116.80378689467419,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 8,
+                  "expected_value": 114.86526049560764,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 109.90234592696575,
+                  "name": "Three of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 108.6269573685543,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 2,
+                  "expected_value": 106.6845101584354,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 102.53065716434384,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                2,
+                4,
+                5,
+                5
+              ],
+              "expected_value": 136.22,
+              "keep_dice": [
+                5,
+                5
+              ],
+              "mask": 7203,
+              "reroll": [
+                1,
+                2,
+                4
+              ],
+              "rolls_remaining": 2,
+              "upper": 31
+            },
+            "timestamp": "2026-01-25T03:40:13.373Z"
+          },
+          {
+            "dice": [
+              2,
+              2,
+              2,
+              4,
+              1
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 6,
+                  "expected_value": 120.90234592696575,
+                  "name": "Three of a Kind",
+                  "points": 11
+                },
+                {
+                  "category": 7,
+                  "expected_value": 118.605548230428,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 114.86526049560764,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 108.6269573685543,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 2,
+                  "expected_value": 106.6845101584354,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 102.53065716434384,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 99.02968677941277,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                2,
+                2,
+                4,
+                1
+              ],
+              "expected_value": 127.83,
+              "keep_dice": [
+                2,
+                2,
+                2
+              ],
+              "mask": 7203,
+              "reroll": [
+                4,
+                1
+              ],
+              "rolls_remaining": 1,
+              "upper": 31
+            },
+            "timestamp": "2026-01-25T03:40:24.890Z"
+          },
+          {
+            "dice": [
+              2,
+              2,
+              2,
+              3,
+              1
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 6,
+              "category_name": "Three of a Kind",
+              "category_options": [
+                {
+                  "category": 6,
+                  "expected_value": 119.90234592696575,
+                  "name": "Three of a Kind",
+                  "points": 10
+                },
+                {
+                  "category": 7,
+                  "expected_value": 118.605548230428,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 114.86526049560764,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 111.88994480506759,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 9,
+                  "expected_value": 102.53065716434384,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 101.87144780228716,
+                  "name": "Fours",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 99.02968677941277,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                2,
+                2,
+                3,
+                1
+              ],
+              "expected_value": 119.9,
+              "mask": 7203,
+              "points": 10,
+              "rolls_remaining": 0,
+              "upper": 31
+            },
+            "timestamp": "2026-01-25T03:40:31.408Z"
+          }
+        ],
+        "finalCategory": "Three of a Kind",
+        "finalPoints": 10,
+        "optimalEV": 119.90234592696575,
+        "actualEV": 119.90234592696575,
+        "evLoss": 0
+      },
+      {
+        "turn": 15,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              4,
+              4,
+              2
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 117.4826753998711,
+                  "name": "Chance",
+                  "points": 22
+                },
+                {
+                  "category": 1,
+                  "expected_value": 114.32672721824513,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 5,
+                  "expected_value": 113.54250320496696,
+                  "name": "Sixes",
+                  "points": 12
+                },
+                {
+                  "category": 7,
+                  "expected_value": 112.03113025220948,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 107.25720400560581,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 102.59937685902972,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                4,
+                4,
+                2
+              ],
+              "expected_value": 130.57,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 3613,
+              "reroll": [
+                4,
+                4,
+                2
+              ],
+              "rolls_remaining": 2,
+              "upper": 46
+            },
+            "timestamp": "2026-01-25T03:40:57.854Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              2,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 116.4826753998711,
+                  "name": "Chance",
+                  "points": 21
+                },
+                {
+                  "category": 1,
+                  "expected_value": 116.32672721824513,
+                  "name": "Twos",
+                  "points": 4
+                },
+                {
+                  "category": 5,
+                  "expected_value": 113.54250320496696,
+                  "name": "Sixes",
+                  "points": 12
+                },
+                {
+                  "category": 7,
+                  "expected_value": 112.03113025220948,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 107.25720400560581,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 102.59937685902972,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                2,
+                2
+              ],
+              "expected_value": 125.15,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 3613,
+              "reroll": [
+                5,
+                2,
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 46
+            },
+            "timestamp": "2026-01-25T03:41:06.628Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              6,
+              3,
+              1
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 5,
+              "category_name": "Sixes",
+              "category_options": [
+                {
+                  "category": 5,
+                  "expected_value": 134.66094509193033,
+                  "name": "Sixes",
+                  "points": 18
+                },
+                {
+                  "category": 6,
+                  "expected_value": 124.59937685902972,
+                  "name": "Three of a Kind",
+                  "points": 22
+                },
+                {
+                  "category": 12,
+                  "expected_value": 117.4826753998711,
+                  "name": "Chance",
+                  "points": 22
+                },
+                {
+                  "category": 1,
+                  "expected_value": 112.32672721824513,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 112.03113025220948,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 107.25720400560581,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                6,
+                3,
+                1
+              ],
+              "expected_value": 134.66,
+              "mask": 3613,
+              "points": 18,
+              "rolls_remaining": 0,
+              "upper": 46
+            },
+            "timestamp": "2026-01-25T03:41:14.227Z"
+          }
+        ],
+        "finalCategory": "Sixes",
+        "finalPoints": 18,
+        "optimalEV": 134.66094509193033,
+        "actualEV": 134.66094509193033,
+        "evLoss": 0
+      },
+      {
+        "turn": 16,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              4,
+              2,
+              1
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 94.39443259443607,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 89.97893938057722,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 3,
+                  "expected_value": 83.45128028971203,
+                  "name": "Fours",
+                  "points": 4
+                },
+                {
+                  "category": 2,
+                  "expected_value": 81.67553264445918,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 77.64238184328383,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 74.31655802646918,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                4,
+                2,
+                1
+              ],
+              "expected_value": 106.91,
+              "keep_dice": [
+                4
+              ],
+              "mask": 7267,
+              "reroll": [
+                6,
+                6,
+                2,
+                1
+              ],
+              "rolls_remaining": 2,
+              "upper": 31
+            },
+            "timestamp": "2026-01-25T03:41:44.519Z"
+          },
+          {
+            "dice": [
+              4,
+              1,
+              4,
+              3,
+              6
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 3,
+                  "expected_value": 96.96174310862648,
+                  "name": "Fours",
+                  "points": 8
+                },
+                {
+                  "category": 7,
+                  "expected_value": 94.39443259443607,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 89.97893938057722,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 86.81890963187118,
+                  "name": "Threes",
+                  "points": 3
+                },
+                {
+                  "category": 9,
+                  "expected_value": 77.64238184328383,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 74.31655802646918,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                1,
+                4,
+                3,
+                6
+              ],
+              "expected_value": 105.07,
+              "keep_dice": [
+                4,
+                4
+              ],
+              "mask": 7267,
+              "reroll": [
+                1,
+                3,
+                6
+              ],
+              "rolls_remaining": 1,
+              "upper": 31
+            },
+            "timestamp": "2026-01-25T03:41:57.843Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              4,
+              1,
+              5
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 3,
+              "category_name": "Fours",
+              "category_options": [
+                {
+                  "category": 3,
+                  "expected_value": 109.46227750215589,
+                  "name": "Fours",
+                  "points": 12
+                },
+                {
+                  "category": 7,
+                  "expected_value": 94.39443259443607,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 89.97893938057722,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 2,
+                  "expected_value": 81.67553264445918,
+                  "name": "Threes",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 80.05273262027461,
+                  "name": "Fives",
+                  "points": 5
+                },
+                {
+                  "category": 9,
+                  "expected_value": 77.64238184328383,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                4,
+                1,
+                5
+              ],
+              "expected_value": 109.46,
+              "mask": 7267,
+              "points": 12,
+              "rolls_remaining": 0,
+              "upper": 31
+            },
+            "timestamp": "2026-01-25T03:42:05.283Z"
+          }
+        ],
+        "finalCategory": "Fours",
+        "finalPoints": 12,
+        "optimalEV": 109.46227750215589,
+        "actualEV": 109.46227750215589,
+        "evLoss": 0
+      },
+      {
+        "turn": 17,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              5,
+              4,
+              4,
+              3,
+              2
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 1,
+                  "expected_value": 108.10108208080604,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 12,
+                  "expected_value": 105.63916803599787,
+                  "name": "Chance",
+                  "points": 18
+                },
+                {
+                  "category": 7,
+                  "expected_value": 102.67777449696888,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 97.24204697815945,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 92.77793536111203,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                4,
+                4,
+                3,
+                2
+              ],
+              "expected_value": 115.2,
+              "keep_dice": [
+                4,
+                4
+              ],
+              "mask": 3645,
+              "reroll": [
+                5,
+                3,
+                2
+              ],
+              "rolls_remaining": 2,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:42:22.905Z"
+          },
+          {
+            "dice": [
+              3,
+              4,
+              4,
+              3,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 1,
+                  "expected_value": 108.10108208080604,
+                  "name": "Twos",
+                  "points": 2
+                },
+                {
+                  "category": 12,
+                  "expected_value": 103.63916803599787,
+                  "name": "Chance",
+                  "points": 16
+                },
+                {
+                  "category": 7,
+                  "expected_value": 102.67777449696888,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 97.24204697815945,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 92.77793536111203,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                3,
+                4,
+                4,
+                3,
+                2
+              ],
+              "expected_value": 112.16,
+              "keep_dice": [
+                3,
+                3,
+                4,
+                4
+              ],
+              "mask": 3645,
+              "reroll": [
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:42:33.773Z"
+          },
+          {
+            "dice": [
+              3,
+              4,
+              4,
+              3,
+              1
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 1,
+              "category_name": "Twos",
+              "category_options": [
+                {
+                  "category": 1,
+                  "expected_value": 106.10108208080604,
+                  "name": "Twos",
+                  "points": 0
+                },
+                {
+                  "category": 7,
+                  "expected_value": 102.67777449696888,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 12,
+                  "expected_value": 102.63916803599787,
+                  "name": "Chance",
+                  "points": 15
+                },
+                {
+                  "category": 8,
+                  "expected_value": 97.24204697815945,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 92.77793536111203,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                3,
+                4,
+                4,
+                3,
+                1
+              ],
+              "expected_value": 106.1,
+              "mask": 3645,
+              "points": 0,
+              "rolls_remaining": 0,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:42:44.730Z"
+          }
+        ],
+        "finalCategory": "Twos",
+        "finalPoints": 0,
+        "optimalEV": 106.10108208080604,
+        "actualEV": 106.10108208080604,
+        "evLoss": 0
+      },
+      {
+        "turn": 18,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              3,
+              3,
+              2,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 89.47791078566894,
+                  "name": "Threes",
+                  "points": 6
+                },
+                {
+                  "category": 7,
+                  "expected_value": 81.47963311833155,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 77.9542864394424,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 66.36502191566063,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 64.96690378147275,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                1,
+                3,
+                3,
+                2,
+                5
+              ],
+              "expected_value": 97.26,
+              "keep_dice": [
+                3,
+                3
+              ],
+              "mask": 7275,
+              "reroll": [
+                1,
+                2,
+                5
+              ],
+              "rolls_remaining": 2,
+              "upper": 43
+            },
+            "timestamp": "2026-01-25T03:43:08.243Z"
+          },
+          {
+            "dice": [
+              3,
+              3,
+              3,
+              2,
+              6
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 92.47791078566894,
+                  "name": "Threes",
+                  "points": 9
+                },
+                {
+                  "category": 7,
+                  "expected_value": 81.47963311833155,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 77.9542864394424,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 66.36502191566063,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 59.40942405989781,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                3,
+                3,
+                3,
+                2,
+                6
+              ],
+              "expected_value": 98.5,
+              "keep_dice": [
+                3,
+                3,
+                3
+              ],
+              "mask": 7275,
+              "reroll": [
+                2,
+                6
+              ],
+              "rolls_remaining": 1,
+              "upper": 43
+            },
+            "timestamp": "2026-01-25T03:43:16.417Z"
+          },
+          {
+            "dice": [
+              3,
+              3,
+              3,
+              5,
+              6
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 2,
+              "category_name": "Threes",
+              "category_options": [
+                {
+                  "category": 2,
+                  "expected_value": 92.47791078566894,
+                  "name": "Threes",
+                  "points": 9
+                },
+                {
+                  "category": 7,
+                  "expected_value": 81.47963311833155,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 77.9542864394424,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 66.36502191566063,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 64.96690378147275,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                3,
+                3,
+                3,
+                5,
+                6
+              ],
+              "expected_value": 92.48,
+              "mask": 7275,
+              "points": 9,
+              "rolls_remaining": 0,
+              "upper": 43
+            },
+            "timestamp": "2026-01-25T03:43:23.651Z"
+          }
+        ],
+        "finalCategory": "Threes",
+        "finalPoints": 9,
+        "optimalEV": 92.47791078566894,
+        "actualEV": 92.47791078566894,
+        "evLoss": 0
+      },
+      {
+        "turn": 19,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              3,
+              2
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 98.32559638737749,
+                  "name": "Chance",
+                  "points": 22
+                },
+                {
+                  "category": 7,
+                  "expected_value": 92.86508746861847,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 88.78191392835582,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 83.01703385505357,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                3,
+                2
+              ],
+              "expected_value": 108.09,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 3647,
+              "reroll": [
+                5,
+                3,
+                2
+              ],
+              "rolls_remaining": 2,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:43:49.689Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              3,
+              3,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 96.32559638737749,
+                  "name": "Chance",
+                  "points": 20
+                },
+                {
+                  "category": 7,
+                  "expected_value": 92.86508746861847,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 88.78191392835582,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 83.01703385505357,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                3,
+                3,
+                2
+              ],
+              "expected_value": 103.23,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 3647,
+              "reroll": [
+                3,
+                3,
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:43:57.777Z"
+          },
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              5,
+              2
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 12,
+              "category_name": "Chance",
+              "category_options": [
+                {
+                  "category": 12,
+                  "expected_value": 100.32559638737749,
+                  "name": "Chance",
+                  "points": 24
+                },
+                {
+                  "category": 7,
+                  "expected_value": 92.86508746861847,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 88.78191392835582,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 83.01703385505357,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                5,
+                2
+              ],
+              "expected_value": 100.33,
+              "mask": 3647,
+              "points": 24,
+              "rolls_remaining": 0,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:44:07.812Z"
+          }
+        ],
+        "finalCategory": "Chance",
+        "finalPoints": 24,
+        "optimalEV": 100.32559638737749,
+        "actualEV": 100.32559638737749,
+        "evLoss": 0
+      },
+      {
+        "turn": 20,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              6,
+              6,
+              5,
+              1,
+              1
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 67.38644140144935,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 64.85344628582321,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 53.42909571802365,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 51.159692610242345,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                6,
+                6,
+                5,
+                1,
+                1
+              ],
+              "expected_value": 81.6,
+              "keep_dice": [
+                5
+              ],
+              "mask": 7279,
+              "reroll": [
+                6,
+                6,
+                1,
+                1
+              ],
+              "rolls_remaining": 2,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:44:26.815Z"
+          },
+          {
+            "dice": [
+              5,
+              4,
+              5,
+              4,
+              2
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 67.38644140144935,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 64.85344628582321,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 56.159692610242345,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 9,
+                  "expected_value": 53.42909571802365,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                4,
+                5,
+                4,
+                2
+              ],
+              "expected_value": 81.31,
+              "keep_dice": [
+                5,
+                5
+              ],
+              "mask": 7279,
+              "reroll": [
+                4,
+                4,
+                2
+              ],
+              "rolls_remaining": 1,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:44:55.913Z"
+          },
+          {
+            "dice": [
+              5,
+              1,
+              5,
+              2,
+              6
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 7,
+              "category_name": "Four of a Kind",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 67.38644140144935,
+                  "name": "Four of a Kind",
+                  "points": 0
+                },
+                {
+                  "category": 8,
+                  "expected_value": 64.85344628582321,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 56.159692610242345,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 9,
+                  "expected_value": 53.42909571802365,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                1,
+                5,
+                2,
+                6
+              ],
+              "expected_value": 67.39,
+              "mask": 7279,
+              "points": 0,
+              "rolls_remaining": 0,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:45:02.280Z"
+          }
+        ],
+        "finalCategory": "Four of a Kind",
+        "finalPoints": 0,
+        "optimalEV": 67.38644140144935,
+        "actualEV": 67.38644140144935,
+        "evLoss": 0
+      },
+      {
+        "turn": 21,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              6
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 7,
+                  "expected_value": 89.59598023306823,
+                  "name": "Four of a Kind",
+                  "points": 26
+                },
+                {
+                  "category": 6,
+                  "expected_value": 80.63637850002881,
+                  "name": "Three of a Kind",
+                  "points": 26
+                },
+                {
+                  "category": 8,
+                  "expected_value": 60.64414901978296,
+                  "name": "Full House",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                5,
+                5,
+                6
+              ],
+              "expected_value": 89.6,
+              "keep_dice": [
+                5,
+                5,
+                5,
+                5,
+                6
+              ],
+              "mask": 7743,
+              "reroll": [],
+              "rolls_remaining": 2,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:45:17.613Z"
+          }
+        ],
+        "finalCategory": "Four of a Kind",
+        "finalPoints": 26,
+        "optimalEV": 89.59598023306823,
+        "actualEV": 89.59598023306823,
+        "evLoss": 0
+      },
+      {
+        "turn": 22,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 92.99593048009086,
+                  "name": "Fives",
+                  "points": 25
+                },
+                {
+                  "category": 8,
+                  "expected_value": 48.776552681454326,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 38.67020970920727,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                5,
+                5,
+                5
+              ],
+              "expected_value": 93,
+              "keep_dice": [
+                5,
+                5,
+                5,
+                5,
+                5
+              ],
+              "mask": 7407,
+              "reroll": [],
+              "rolls_remaining": 2,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:45:52.399Z"
+          },
+          {
+            "dice": [
+              2,
+              2,
+              2,
+              4,
+              6
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 48.776552681454326,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 38.67020970920727,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 32.99593048009092,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                2,
+                2,
+                2,
+                4,
+                6
+              ],
+              "expected_value": 61.47,
+              "keep_dice": [
+                4
+              ],
+              "mask": 7407,
+              "reroll": [
+                2,
+                2,
+                2,
+                6
+              ],
+              "rolls_remaining": 2,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:46:16.669Z"
+          },
+          {
+            "dice": [
+              2,
+              2,
+              2,
+              4,
+              5
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 48.776552681454326,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 9,
+                  "expected_value": 38.67020970920727,
+                  "name": "Small Straight",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 37.99593048009092,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                2,
+                2,
+                2,
+                4,
+                5
+              ],
+              "expected_value": 56.71,
+              "keep_dice": [
+                5
+              ],
+              "mask": 7407,
+              "reroll": [
+                2,
+                2,
+                2,
+                4
+              ],
+              "rolls_remaining": 1,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:46:28.768Z"
+          },
+          {
+            "dice": [
+              5,
+              2,
+              2,
+              6,
+              5
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 8,
+              "category_name": "Full House",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 48.776552681454326,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 4,
+                  "expected_value": 42.99593048009092,
+                  "name": "Fives",
+                  "points": 10
+                },
+                {
+                  "category": 9,
+                  "expected_value": 38.67020970920727,
+                  "name": "Small Straight",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                2,
+                2,
+                6,
+                5
+              ],
+              "expected_value": 48.78,
+              "mask": 7407,
+              "points": 0,
+              "rolls_remaining": 0,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:46:37.659Z"
+          }
+        ],
+        "finalCategory": "Full House",
+        "finalPoints": 0,
+        "optimalEV": 48.776552681454326,
+        "actualEV": 48.776552681454326,
+        "evLoss": 0
+      },
+      {
+        "turn": 23,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              4,
+              4,
+              5,
+              3,
+              2
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 50.1946612929516,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 44.07207196300948,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                5,
+                3,
+                2
+              ],
+              "expected_value": 62.26,
+              "keep_dice": [
+                4,
+                4
+              ],
+              "mask": 7871,
+              "reroll": [
+                5,
+                3,
+                2
+              ],
+              "rolls_remaining": 2,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:46:56.296Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              6,
+              6,
+              3
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 50.1946612929516,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 44.07207196300948,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                6,
+                6,
+                3
+              ],
+              "expected_value": 59.04,
+              "keep_dice": [
+                6,
+                6
+              ],
+              "mask": 7871,
+              "reroll": [
+                4,
+                4,
+                3
+              ],
+              "rolls_remaining": 1,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:47:06.555Z"
+          },
+          {
+            "dice": [
+              5,
+              5,
+              6,
+              6,
+              4
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 8,
+              "category_name": "Full House",
+              "category_options": [
+                {
+                  "category": 8,
+                  "expected_value": 50.1946612929516,
+                  "name": "Full House",
+                  "points": 0
+                },
+                {
+                  "category": 6,
+                  "expected_value": 44.07207196300948,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                5,
+                5,
+                6,
+                6,
+                4
+              ],
+              "expected_value": 50.19,
+              "mask": 7871,
+              "points": 0,
+              "rolls_remaining": 0,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:47:14.168Z"
+          }
+        ],
+        "finalCategory": "Full House",
+        "finalPoints": 0,
+        "optimalEV": 50.1946612929516,
+        "actualEV": 50.1946612929516,
+        "evLoss": 0
+      },
+      {
+        "turn": 24,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              2,
+              3,
+              4,
+              6
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 9,
+                  "expected_value": 52.952157336631444,
+                  "name": "Small Straight",
+                  "points": 30
+                },
+                {
+                  "category": 4,
+                  "expected_value": 18.463269387108188,
+                  "name": "Fives",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                2,
+                3,
+                4,
+                6
+              ],
+              "expected_value": 52.95,
+              "keep_dice": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "mask": 7663,
+              "reroll": [
+                6
+              ],
+              "rolls_remaining": 2,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:47:30.155Z"
+          }
+        ],
+        "finalCategory": "Small Straight",
+        "finalPoints": 30,
+        "optimalEV": 52.952157336631444,
+        "actualEV": 52.952157336631444,
+        "evLoss": 0
+      },
+      {
+        "turn": 25,
+        "player": 1,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              1,
+              2,
+              3,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 6,
+                  "expected_value": 35,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                1,
+                1,
+                2,
+                3,
+                5
+              ],
+              "expected_value": 46.11,
+              "keep_dice": [
+                5
+              ],
+              "mask": 8127,
+              "reroll": [
+                1,
+                1,
+                2,
+                3
+              ],
+              "rolls_remaining": 2,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:47:56.204Z"
+          },
+          {
+            "dice": [
+              6,
+              4,
+              3,
+              1,
+              5
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 6,
+                  "expected_value": 35,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                4,
+                3,
+                1,
+                5
+              ],
+              "expected_value": 39.72,
+              "keep_dice": [
+                6
+              ],
+              "mask": 8127,
+              "reroll": [
+                4,
+                3,
+                1,
+                5
+              ],
+              "rolls_remaining": 1,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:48:12.054Z"
+          },
+          {
+            "dice": [
+              6,
+              4,
+              4,
+              1,
+              1
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 6,
+              "category_name": "Three of a Kind",
+              "category_options": [
+                {
+                  "category": 6,
+                  "expected_value": 35,
+                  "name": "Three of a Kind",
+                  "points": 0
+                }
+              ],
+              "dice": [
+                6,
+                4,
+                4,
+                1,
+                1
+              ],
+              "expected_value": 35,
+              "mask": 8127,
+              "points": 0,
+              "rolls_remaining": 0,
+              "upper": 63
+            },
+            "timestamp": "2026-01-25T03:48:20.863Z"
+          }
+        ],
+        "finalCategory": "Three of a Kind",
+        "finalPoints": 0,
+        "optimalEV": 35,
+        "actualEV": 35,
+        "evLoss": 0
+      },
+      {
+        "turn": 26,
+        "player": 2,
+        "rolls": [
+          {
+            "dice": [
+              1,
+              2,
+              3,
+              3,
+              5
+            ],
+            "rollsRemaining": 2,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 5,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                1,
+                2,
+                3,
+                3,
+                5
+              ],
+              "expected_value": 23.65,
+              "keep_dice": [
+                5
+              ],
+              "mask": 8175,
+              "reroll": [
+                1,
+                2,
+                3,
+                3
+              ],
+              "rolls_remaining": 2,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:49:57.108Z"
+          },
+          {
+            "dice": [
+              3,
+              4,
+              6,
+              6,
+              5
+            ],
+            "rollsRemaining": 1,
+            "recommendation": {
+              "action": "keep",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 5,
+                  "name": "Fives",
+                  "points": 5
+                }
+              ],
+              "dice": [
+                3,
+                4,
+                6,
+                6,
+                5
+              ],
+              "expected_value": 12.95,
+              "keep_dice": [
+                5
+              ],
+              "mask": 8175,
+              "reroll": [
+                3,
+                4,
+                6,
+                6
+              ],
+              "rolls_remaining": 1,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:50:10.655Z"
+          },
+          {
+            "dice": [
+              4,
+              4,
+              5,
+              6,
+              5
+            ],
+            "rollsRemaining": 0,
+            "recommendation": {
+              "action": "score",
+              "category": 4,
+              "category_name": "Fives",
+              "category_options": [
+                {
+                  "category": 4,
+                  "expected_value": 10,
+                  "name": "Fives",
+                  "points": 10
+                }
+              ],
+              "dice": [
+                4,
+                4,
+                5,
+                6,
+                5
+              ],
+              "expected_value": 10,
+              "mask": 8175,
+              "points": 10,
+              "rolls_remaining": 0,
+              "upper": 52
+            },
+            "timestamp": "2026-01-25T03:50:21.677Z"
+          }
+        ],
+        "finalCategory": "Fives",
+        "finalPoints": 10,
+        "optimalEV": 10,
+        "actualEV": 10,
+        "evLoss": 0
+      }
+    ],
+    "player1_scores": {
+      "0": 2,
+      "1": 0,
+      "2": 12,
+      "3": 12,
+      "4": 20,
+      "5": 18,
+      "6": 0,
+      "7": 26,
+      "8": 0,
+      "9": 30,
+      "10": 40,
+      "11": 50,
+      "12": 24
+    },
+    "player2_scores": {
+      "0": 3,
+      "1": 4,
+      "2": 9,
+      "3": 12,
+      "4": 10,
+      "5": 24,
+      "6": 10,
+      "7": 0,
+      "8": 0,
+      "9": 30,
+      "10": 40,
+      "11": 50,
+      "12": 24
+    },
+    "stats": {
+      "player1": {
+        "totalEVLoss": 0,
+        "worstMoves": [],
+        "bestMoves": [
+          {
+            "turn": 1,
+            "category": "Yahtzee",
+            "points": 50,
+            "evLoss": 0,
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              5
+            ]
+          },
+          {
+            "turn": 3,
+            "category": "Large Straight",
+            "points": 40,
+            "evLoss": 0,
+            "dice": [
+              2,
+              3,
+              4,
+              5,
+              6
+            ]
+          },
+          {
+            "turn": 5,
+            "category": "Ones",
+            "points": 2,
+            "evLoss": 0,
+            "dice": [
+              1,
+              3,
+              3,
+              1,
+              6
+            ]
+          },
+          {
+            "turn": 7,
+            "category": "Threes",
+            "points": 12,
+            "evLoss": 0,
+            "dice": [
+              3,
+              3,
+              3,
+              3,
+              6
+            ]
+          },
+          {
+            "turn": 9,
+            "category": "Small Straight",
+            "points": 30,
+            "evLoss": 0,
+            "dice": [
+              6,
+              2,
+              5,
+              4,
+              3
+            ]
+          },
+          {
+            "turn": 11,
+            "category": "Fives",
+            "points": 20,
+            "evLoss": 0,
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              4
+            ]
+          },
+          {
+            "turn": 13,
+            "category": "Fours",
+            "points": 12,
+            "evLoss": 0,
+            "dice": [
+              4,
+              4,
+              5,
+              4,
+              1
+            ]
+          },
+          {
+            "turn": 15,
+            "category": "Sixes",
+            "points": 18,
+            "evLoss": 0,
+            "dice": [
+              6,
+              6,
+              6,
+              3,
+              1
+            ]
+          },
+          {
+            "turn": 17,
+            "category": "Twos",
+            "points": 0,
+            "evLoss": 0,
+            "dice": [
+              3,
+              4,
+              4,
+              3,
+              1
+            ]
+          },
+          {
+            "turn": 19,
+            "category": "Chance",
+            "points": 24,
+            "evLoss": 0,
+            "dice": [
+              6,
+              6,
+              5,
+              5,
+              2
+            ]
+          },
+          {
+            "turn": 21,
+            "category": "Four of a Kind",
+            "points": 26,
+            "evLoss": 0,
+            "dice": [
+              5,
+              5,
+              5,
+              5,
+              6
+            ]
+          },
+          {
+            "turn": 23,
+            "category": "Full House",
+            "points": 0,
+            "evLoss": 0,
+            "dice": [
+              5,
+              5,
+              6,
+              6,
+              4
+            ]
+          },
+          {
+            "turn": 25,
+            "category": "Three of a Kind",
+            "points": 0,
+            "evLoss": 0,
+            "dice": [
+              6,
+              4,
+              4,
+              1,
+              1
+            ]
+          }
+        ],
+        "avgEVLoss": 0
+      },
+      "player2": {
+        "totalEVLoss": 0,
+        "worstMoves": [],
+        "bestMoves": [
+          {
+            "turn": 2,
+            "category": "Yahtzee",
+            "points": 50,
+            "evLoss": 0,
+            "dice": [
+              4,
+              4,
+              4,
+              4,
+              4
+            ]
+          },
+          {
+            "turn": 4,
+            "category": "Twos",
+            "points": 4,
+            "evLoss": 0,
+            "dice": [
+              2,
+              6,
+              2,
+              5,
+              6
+            ]
+          },
+          {
+            "turn": 6,
+            "category": "Sixes",
+            "points": 24,
+            "evLoss": 0,
+            "dice": [
+              6,
+              6,
+              6,
+              6,
+              3
+            ]
+          },
+          {
+            "turn": 8,
+            "category": "Chance",
+            "points": 24,
+            "evLoss": 0,
+            "dice": [
+              6,
+              6,
+              5,
+              5,
+              2
+            ]
+          },
+          {
+            "turn": 10,
+            "category": "Large Straight",
+            "points": 40,
+            "evLoss": 0,
+            "dice": [
+              2,
+              3,
+              1,
+              4,
+              5
+            ]
+          },
+          {
+            "turn": 12,
+            "category": "Ones",
+            "points": 3,
+            "evLoss": 0,
+            "dice": [
+              1,
+              1,
+              1,
+              2,
+              5
+            ]
+          },
+          {
+            "turn": 14,
+            "category": "Three of a Kind",
+            "points": 10,
+            "evLoss": 0,
+            "dice": [
+              2,
+              2,
+              2,
+              3,
+              1
+            ]
+          },
+          {
+            "turn": 16,
+            "category": "Fours",
+            "points": 12,
+            "evLoss": 0,
+            "dice": [
+              4,
+              4,
+              4,
+              1,
+              5
+            ]
+          },
+          {
+            "turn": 18,
+            "category": "Threes",
+            "points": 9,
+            "evLoss": 0,
+            "dice": [
+              3,
+              3,
+              3,
+              5,
+              6
+            ]
+          },
+          {
+            "turn": 20,
+            "category": "Four of a Kind",
+            "points": 0,
+            "evLoss": 0,
+            "dice": [
+              5,
+              1,
+              5,
+              2,
+              6
+            ]
+          },
+          {
+            "turn": 22,
+            "category": "Full House",
+            "points": 0,
+            "evLoss": 0,
+            "dice": [
+              5,
+              2,
+              2,
+              6,
+              5
+            ]
+          },
+          {
+            "turn": 24,
+            "category": "Small Straight",
+            "points": 30,
+            "evLoss": 0,
+            "dice": [
+              1,
+              2,
+              3,
+              4,
+              6
+            ]
+          },
+          {
+            "turn": 26,
+            "category": "Fives",
+            "points": 10,
+            "evLoss": 0,
+            "dice": [
+              4,
+              4,
+              5,
+              6,
+              5
+            ]
+          }
+        ],
+        "avgEVLoss": 0
+      }
+    },
+    "game_id": 1
+  },
+  {
+    "timestamp": "2026-01-26T09:59:44.710Z",
+    "player1_score": 225,
+    "player2_score": 287,
+    "winner": 2,
+    "turns": [
+      {
+        "turn": 1,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Chance",
+        "finalPoints": 22,
+        "optimalEV": 241.83571405830577,
+        "actualEV": 241.83571405830577,
+        "evLoss": 0
+      },
+      {
+        "turn": 2,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Fives",
+        "finalPoints": 20,
+        "optimalEV": 264.3823678690677,
+        "actualEV": 264.3823678690677,
+        "evLoss": 0
+      },
+      {
+        "turn": 3,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Yahtzee",
+        "finalPoints": 50,
+        "optimalEV": 284.28235003195334,
+        "actualEV": 284.28235003195334,
+        "evLoss": 0
+      },
+      {
+        "turn": 4,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Full House",
+        "finalPoints": 25,
+        "optimalEV": 244.41938139091116,
+        "actualEV": 244.41938139091116,
+        "evLoss": 0
+      },
+      {
+        "turn": 5,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Fives",
+        "finalPoints": 15,
+        "optimalEV": 227.59199373364456,
+        "actualEV": 227.59199373364456,
+        "evLoss": 0
+      },
+      {
+        "turn": 6,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Sixes",
+        "finalPoints": 18,
+        "optimalEV": 218.63684526445303,
+        "actualEV": 218.63684526445303,
+        "evLoss": 0
+      },
+      {
+        "turn": 7,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Three of a Kind",
+        "finalPoints": 19,
+        "optimalEV": 200.06638737083955,
+        "actualEV": 200.06638737083955,
+        "evLoss": 0
+      },
+      {
+        "turn": 8,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Yahtzee",
+        "finalPoints": 50,
+        "optimalEV": 260.65885053242954,
+        "actualEV": 260.65885053242954,
+        "evLoss": 0
+      },
+      {
+        "turn": 9,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Sixes",
+        "finalPoints": 18,
+        "optimalEV": 173.60756546958166,
+        "actualEV": 173.60756546958166,
+        "evLoss": 0
+      },
+      {
+        "turn": 10,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Three of a Kind",
+        "finalPoints": 24,
+        "optimalEV": 203.5627086037634,
+        "actualEV": 203.5627086037634,
+        "evLoss": 0
+      },
+      {
+        "turn": 11,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Small Straight",
+        "finalPoints": 30,
+        "optimalEV": 148.1265754054989,
+        "actualEV": 148.1265754054989,
+        "evLoss": 0
+      },
+      {
+        "turn": 12,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Twos",
+        "finalPoints": 8,
+        "optimalEV": 177.85939836774602,
+        "actualEV": 177.85939836774602,
+        "evLoss": 0
+      },
+      {
+        "turn": 13,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Full House",
+        "finalPoints": 25,
+        "optimalEV": 118.5778760805783,
+        "actualEV": 118.5778760805783,
+        "evLoss": 0
+      },
+      {
+        "turn": 14,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Small Straight",
+        "finalPoints": 30,
+        "optimalEV": 163.83817439681556,
+        "actualEV": 163.83817439681556,
+        "evLoss": 0
+      },
+      {
+        "turn": 15,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Fours",
+        "finalPoints": 12,
+        "optimalEV": 87.54896894574235,
+        "actualEV": 87.54896894574235,
+        "evLoss": 0
+      },
+      {
+        "turn": 16,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Ones",
+        "finalPoints": 4,
+        "optimalEV": 128.1264244200271,
+        "actualEV": 128.1264244200271,
+        "evLoss": 0
+      },
+      {
+        "turn": 17,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Four of a Kind",
+        "finalPoints": 26,
+        "optimalEV": 82.32178587046207,
+        "actualEV": 82.32178587046207,
+        "evLoss": 0
+      },
+      {
+        "turn": 18,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Chance",
+        "finalPoints": 19,
+        "optimalEV": 108.72004788303028,
+        "actualEV": 108.72004788303028,
+        "evLoss": 0
+      },
+      {
+        "turn": 19,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Ones",
+        "finalPoints": 0,
+        "optimalEV": 40.723164982247404,
+        "actualEV": 40.723164982247404,
+        "evLoss": 0
+      },
+      {
+        "turn": 20,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Large Straight",
+        "finalPoints": 40,
+        "optimalEV": 106.66571685762909,
+        "actualEV": 106.66571685762909,
+        "evLoss": 0
+      },
+      {
+        "turn": 21,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Threes",
+        "finalPoints": 6,
+        "optimalEV": 31.072840665207718,
+        "actualEV": 31.072840665207718,
+        "evLoss": 0
+      },
+      {
+        "turn": 22,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Threes",
+        "finalPoints": 6,
+        "optimalEV": 58.95952693265994,
+        "actualEV": 58.95952693265994,
+        "evLoss": 0
+      },
+      {
+        "turn": 23,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Twos",
+        "finalPoints": 2,
+        "optimalEV": 14.480611309039926,
+        "actualEV": 14.480611309039926,
+        "evLoss": 0
+      },
+      {
+        "turn": 24,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Fours",
+        "finalPoints": 8,
+        "optimalEV": 53.03938675841953,
+        "actualEV": 53.03938675841953,
+        "evLoss": 0
+      },
+      {
+        "turn": 25,
+        "player": 1,
+        "rolls": [],
+        "finalCategory": "Large Straight",
+        "finalPoints": 0,
+        "optimalEV": 0,
+        "actualEV": 0,
+        "evLoss": 0
+      },
+      {
+        "turn": 26,
+        "player": 2,
+        "rolls": [],
+        "finalCategory": "Four of a Kind",
+        "finalPoints": 0,
+        "optimalEV": 35,
+        "actualEV": 35,
+        "evLoss": 0
+      }
+    ],
+    "player1_scores": {
+      "0": 0,
+      "1": 2,
+      "2": 6,
+      "3": 12,
+      "4": 15,
+      "5": 18,
+      "6": 19,
+      "7": 26,
+      "8": 25,
+      "9": 30,
+      "10": 0,
+      "11": 50,
+      "12": 22
+    },
+    "player2_scores": {
+      "0": 4,
+      "1": 8,
+      "2": 6,
+      "3": 8,
+      "4": 20,
+      "5": 18,
+      "6": 24,
+      "7": 0,
+      "8": 25,
+      "9": 30,
+      "10": 40,
+      "11": 50,
+      "12": 19
+    },
+    "stats": {
+      "player1": {
+        "totalEVLoss": 0,
+        "worstMoves": [],
+        "bestMoves": [
+          {
+            "turn": 1,
+            "category": "Chance",
+            "points": 22,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 3,
+            "category": "Yahtzee",
+            "points": 50,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 5,
+            "category": "Fives",
+            "points": 15,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 7,
+            "category": "Three of a Kind",
+            "points": 19,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 9,
+            "category": "Sixes",
+            "points": 18,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 11,
+            "category": "Small Straight",
+            "points": 30,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 13,
+            "category": "Full House",
+            "points": 25,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 15,
+            "category": "Fours",
+            "points": 12,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 17,
+            "category": "Four of a Kind",
+            "points": 26,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 19,
+            "category": "Ones",
+            "points": 0,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 21,
+            "category": "Threes",
+            "points": 6,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 23,
+            "category": "Twos",
+            "points": 2,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 25,
+            "category": "Large Straight",
+            "points": 0,
+            "evLoss": 0,
+            "dice": []
+          }
+        ],
+        "avgEVLoss": 0
+      },
+      "player2": {
+        "totalEVLoss": 0,
+        "worstMoves": [],
+        "bestMoves": [
+          {
+            "turn": 2,
+            "category": "Fives",
+            "points": 20,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 4,
+            "category": "Full House",
+            "points": 25,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 6,
+            "category": "Sixes",
+            "points": 18,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 8,
+            "category": "Yahtzee",
+            "points": 50,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 10,
+            "category": "Three of a Kind",
+            "points": 24,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 12,
+            "category": "Twos",
+            "points": 8,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 14,
+            "category": "Small Straight",
+            "points": 30,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 16,
+            "category": "Ones",
+            "points": 4,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 18,
+            "category": "Chance",
+            "points": 19,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 20,
+            "category": "Large Straight",
+            "points": 40,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 22,
+            "category": "Threes",
+            "points": 6,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 24,
+            "category": "Fours",
+            "points": 8,
+            "evLoss": 0,
+            "dice": []
+          },
+          {
+            "turn": 26,
+            "category": "Four of a Kind",
+            "points": 0,
+            "evLoss": 0,
+            "dice": []
+          }
+        ],
+        "avgEVLoss": 0
+      }
+    },
+    "mode": "true-joker",
+    "isJokerMode": true,
+    "player1_yahtzee_status": 2,
+    "player2_yahtzee_status": 2,
+    "player1_yahtzee_bonuses": 0,
+    "player2_yahtzee_bonuses": 0,
+    "game_id": 2
+  }
+]

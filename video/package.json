@@ -1,0 +1,20 @@
+{
+  "name": "yahtzee-solver-ad",
+  "version": "1.0.0",
+  "description": "Yahtzee Solver advertisement video",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "remotion render ysolver-ad out/ysolver-ad.mp4",
+    "preview": "remotion preview"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
+}

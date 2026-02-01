@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Cache files (large)
+*.pkl
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+.Thumbs.db
+
+# IDE
+.cursor/
+.vscode/
+.idea/
+
+# Pytest
+.pytest_cache/
+
+# Local config
+.claude/
+.agents/
+
+# Node
+node_modules/
+
+# Generated media
+media/
+Math-To-Manim/

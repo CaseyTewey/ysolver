@@ -1,0 +1,16 @@
+{
+  "dice": [4, 4, 4, 5, 6],
+  "rolls_remaining": 1,
+  "current_player": {
+    "score": 87,
+    "mask": 259,
+    "upper": 15,
+    "name": "You"
+  },
+  "opponent": {
+    "score": 92,
+    "mask": 456,
+    "upper": 22,
+    "name": "Opponent"
+  }
+}
