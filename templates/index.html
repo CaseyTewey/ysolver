@@ -1213,33 +1213,8 @@
     </style>
 </head>
 <body>
-    <!-- Mode Selection Overlay -->
-    <div class="mode-overlay" id="mode-overlay">
-        <div class="mode-selector">
-            <h2>Yahtzee Solver</h2>
-            <p>Choose your game mode</p>
-            <div class="mode-buttons">
-                <button class="mode-btn" onclick="startGame('free')">
-                    <h3>Free Play</h3>
-                    <p>Practice mode. Traditional rules, no logging.</p>
-                </button>
-                <button class="mode-btn" onclick="startGame('free-joker')">
-                    <h3>Free Play (Joker)</h3>
-                    <p>Practice mode with Yahtzee joker bonus rules.</p>
-                </button>
-                <button class="mode-btn primary" onclick="startGame('true')">
-                    <h3>True Gameplay</h3>
-                    <p>Full tracking. Traditional rules with logging.</p>
-                </button>
-                <button class="mode-btn primary" onclick="startGame('true-joker')">
-                    <h3>True Gameplay (Joker)</h3>
-                    <p>Full tracking with joker bonus rules (+100 per extra Yahtzee).</p>
-                </button>
-            </div>
-            <button style="margin-top: 20px; background: none; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); padding: 10px 20px; border-radius: 8px; cursor: pointer;" onclick="viewHistoryFromStart()">
-                View Past Games
-            </button>
-        </div>
+    <!-- Mode Selection Overlay - Hidden, auto-starts in Joker mode -->
+    <div class="mode-overlay hidden" id="mode-overlay">
     </div>
 
     <!-- Game Log Panel (slides in from right) -->
@@ -1427,8 +1402,8 @@
         };
 
         // Game mode and logging
-        let gameMode = null; // 'free', 'true', 'free-joker', or 'true-joker'
-        let isJokerMode = false; // True if playing with joker rules
+        let gameMode = 'true-joker'; // Always joker mode now
+        let isJokerMode = true; // Always true - joker rules only
         let currentTurn = 1;
         let gameLog = []; // Array of turn entries
         let currentTurnData = null; // Data being collected for current turn
@@ -1481,8 +1456,9 @@
 
         // Start game with selected mode
         function startGame(mode) {
-            gameMode = mode;
-            isJokerMode = mode.includes('joker');
+            // Always use joker mode now
+            gameMode = 'true-joker';
+            isJokerMode = true;
             document.getElementById('mode-overlay').classList.add('hidden');
 
             const indicator = document.getElementById('mode-indicator');
@@ -1492,41 +1468,67 @@
             yahtzeeStatus = { 1: 0, 2: 0 };
             yahtzeeBonuses = { 1: 0, 2: 0 };
 
-            if (mode === 'true' || mode === 'true-joker') {
-                const modeText = isJokerMode ? 'TRUE GAMEPLAY (JOKER)' : 'TRUE GAMEPLAY';
-                indicator.textContent = modeText;
-                indicator.className = 'mode-indicator true-gameplay';
-                if (isJokerMode) {
-                    indicator.style.background = 'linear-gradient(90deg, #ffd700, #ff6b6b)';
-                }
-                document.getElementById('turn-indicator').classList.remove('hidden');
-                document.getElementById('toggle-log-btn').classList.remove('hidden');
-                document.getElementById('confirm-score-btn').classList.remove('hidden');
-                // Disable direct score input in true gameplay - must use confirm button
-                disableDirectScoreInput();
-                initTurn();
-            } else {
-                const modeText = isJokerMode ? 'FREE PLAY (JOKER)' : 'FREE PLAY';
-                indicator.textContent = modeText;
-                indicator.className = 'mode-indicator free-play';
-                if (isJokerMode) {
-                    indicator.style.background = 'linear-gradient(90deg, #ffd700, #4CAF50)';
-                }
-            }
+            // Always joker mode UI
+            indicator.textContent = 'JOKER MODE';
+            indicator.className = 'mode-indicator true-gameplay';
+            indicator.style.background = 'linear-gradient(90deg, #ffd700, #ff6b6b)';
 
-            // Show joker bonus display if in joker mode
-            if (isJokerMode) {
-                showJokerBonusDisplay();
-            }
+            document.getElementById('turn-indicator').classList.remove('hidden');
+            document.getElementById('toggle-log-btn').classList.remove('hidden');
+            document.getElementById('confirm-score-btn').classList.remove('hidden');
 
-            // Update fresh game EV for the selected mode
+            // KEEP direct score input enabled - users can enter scores directly
+            // (removed disableDirectScoreInput() call)
+
+            initTurn();
+
+            // Show joker bonus display
+            showJokerBonusDisplay();
+
+            // Update fresh game EV for joker mode
             updateFreshEV();
 
-            // Update win probabilities with correct mode
+            // Update win probabilities
             updateWinProbabilities();
 
             // Update calculation mode indicator
             updateCalcModeIndicator();
+
+            // Calculate turn from board state
+            calculateTurnFromBoard();
+        }
+
+        // Calculate turn number and active player from board state
+        function calculateTurnFromBoard() {
+            const p1Filled = Object.keys(playerScores[1]).filter(k => playerScores[1][k] !== undefined).length;
+            const p2Filled = Object.keys(playerScores[2]).filter(k => playerScores[2][k] !== undefined).length;
+            const totalFilled = p1Filled + p2Filled;
+
+            // Turn number is based on total filled (each turn fills one category)
+            // Turn 1 = first entry, Turn 26 = last entry
+            currentTurn = Math.min(totalFilled + 1, 26);
+
+            // Active player: whoever has fewer filled categories (P1 if tied)
+            if (p1Filled <= p2Filled) {
+                setActivePlayer(1);
+            } else {
+                setActivePlayer(2);
+            }
+
+            // Update turn display
+            updateTurnDisplay();
+        }
+
+        // Update turn display
+        function updateTurnDisplay() {
+            const turnNumEl = document.getElementById('current-turn-num');
+            const turnPlayerEl = document.getElementById('turn-player-name');
+            if (turnNumEl) {
+                turnNumEl.textContent = currentTurn;
+            }
+            if (turnPlayerEl) {
+                turnPlayerEl.textContent = `Player ${activePlayer}`;
+            }
         }
 
         // Update the calculation mode indicator in footer
@@ -2450,18 +2452,15 @@
             } else {
                 playerScores[player][category] = parseInt(value);
                 document.getElementById(`row-${player}-${category}`).classList.add('filled');
-
-                // Auto-switch to other player after entering a score (only in free play mode)
-                if (gameMode !== 'true') {
-                    const otherPlayer = player === 1 ? 2 : 1;
-                    setTimeout(() => {
-                        setActivePlayer(otherPlayer);
-                        clearDiceForNewTurn();
-                    }, 300);
-                }
             }
             updateTotals(player);
             updateWinProbabilities();
+
+            // Auto-deduce turn number and active player from board state
+            calculateTurnFromBoard();
+
+            // Clear dice for new turn after scoring
+            clearDiceForNewTurn();
         }
 
         // Set fixed score for categories like Full House, Straights, Yahtzee
@@ -2469,15 +2468,6 @@
             // Check if already filled
             if (playerScores[player][category] !== undefined) return;
 
-            // In True Gameplay mode, use the logging function
-            if (gameMode === 'true') {
-                // Only allow for active player
-                if (player !== activePlayer) return;
-                logAndScoreTurn(category, value);
-                return;
-            }
-
-            // Free play mode
             saveState();
 
             // Reset waiting state
@@ -2505,15 +2495,23 @@
                 toggle.querySelector('.zero-btn').classList.add('active');
             }
 
+            // Handle Yahtzee status tracking for joker mode
+            if (category === 11) { // Yahtzee category
+                if (value === 50) {
+                    yahtzeeStatus[player] = 2; // SCORED
+                } else {
+                    yahtzeeStatus[player] = 1; // SCRATCHED
+                }
+            }
+
             updateTotals(player);
             updateWinProbabilities();
 
-            // Auto-switch to other player (free play mode)
-            const otherPlayer = player === 1 ? 2 : 1;
-            setTimeout(() => {
-                setActivePlayer(otherPlayer);
-                clearDiceForNewTurn();
-            }, 300);
+            // Auto-deduce turn from board state
+            calculateTurnFromBoard();
+
+            // Clear dice for new turn
+            clearDiceForNewTurn();
         }
 
         // Clear dice for a new turn without saving state (called after scoring)
@@ -3487,16 +3485,19 @@
             setupDiceInputs();
             updateCurrentDieIndicator();
 
+            // Auto-start in joker mode (no mode selection needed)
+            startGame('true-joker');
+
             // Focus first dice input
             setTimeout(() => {
                 document.getElementById('die-1').focus();
             }, 100);
 
-            // Set fresh game EV
+            // Set fresh game EV (joker mode)
             fetch('/api/game_ev', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scores: {} })
+                body: JSON.stringify({ scores: {}, yahtzee_status: 0 })
             })
             .then(r => r.json())
             .then(data => {

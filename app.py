@@ -278,8 +278,7 @@ def recommend():
     rolls_remaining = data.get('rolls_remaining', 2)
     player_scores = data.get('scores', {})
 
-    # NEW: Joker mode parameters
-    mode = data.get('mode', 'traditional')
+    # Joker mode parameters (joker mode is now the only mode)
     yahtzee_status = data.get('yahtzee_status', YAHTZEE_UNFILLED)
     yahtzee_bonuses = data.get('yahtzee_bonuses', 0)
 
@@ -294,15 +293,11 @@ def recommend():
     mask = compute_mask(filled)
     upper = compute_upper_total(player_scores)
 
-    # Get recommendation based on mode
-    if mode == 'joker':
-        rec = get_recommendation_joker(dice, mask, upper, rolls_remaining, yahtzee_status)
-        rec['yahtzee_bonuses'] = yahtzee_bonuses
-    else:
-        rec = get_recommendation(dice, mask, upper, rolls_remaining)
-        rec['mode'] = 'traditional'
+    # Always use joker mode
+    rec = get_recommendation_joker(dice, mask, upper, rolls_remaining, yahtzee_status)
+    rec['yahtzee_bonuses'] = yahtzee_bonuses
 
-    # Format response
+    # Format response (always joker mode)
     response = {
         'dice': dice,
         'rolls_remaining': rolls_remaining,
@@ -310,20 +305,19 @@ def recommend():
         'upper': upper,
         'action': rec['action'],
         'expected_value': round(rec['expected_value'], 2),
-        'mode': rec.get('mode', 'traditional'),
+        'mode': 'joker',
+        'yahtzee_status': yahtzee_status,
+        'yahtzee_bonuses': yahtzee_bonuses,
+        'is_yahtzee_roll': bool(rec.get('is_yahtzee_roll', False)),
+        'joker_bonus_available': bool(rec.get('joker_bonus_available', False)),
     }
 
     # Add joker-specific fields
-    if mode == 'joker':
-        response['yahtzee_status'] = yahtzee_status
-        response['yahtzee_bonuses'] = yahtzee_bonuses
-        response['is_yahtzee_roll'] = bool(rec.get('is_yahtzee_roll', False))
-        response['joker_bonus_available'] = bool(rec.get('joker_bonus_available', False))
-        if rec.get('forced_category') is not None:
-            response['forced_category'] = rec['forced_category']
-            response['forced_category_name'] = rec.get('forced_category_name')
-        if rec.get('joker_bonus'):
-            response['joker_bonus'] = rec['joker_bonus']
+    if rec.get('forced_category') is not None:
+        response['forced_category'] = rec['forced_category']
+        response['forced_category_name'] = rec.get('forced_category_name')
+    if rec.get('joker_bonus'):
+        response['joker_bonus'] = rec['joker_bonus']
 
     if rec['action'] == 'keep':
         # Calculate which dice to reroll (remove kept dice from original roll)
@@ -379,20 +373,17 @@ def score_options():
 
 @app.route('/api/game_ev', methods=['POST'])
 def game_ev():
-    """Get expected remaining value for a game state."""
+    """Get expected remaining value for a game state (always joker mode)."""
     data = request.json
     player_scores = data.get('scores', {})
-    mode = data.get('mode', 'traditional')
     yahtzee_status = data.get('yahtzee_status', YAHTZEE_UNFILLED)
 
     filled = [int(k) for k, v in player_scores.items() if v is not None]
     mask = compute_mask(filled)
     upper = compute_upper_total(player_scores)
 
-    if mode == 'joker':
-        ev = ev_remaining_joker(mask, upper, yahtzee_status)
-    else:
-        ev = ev_remaining(mask, upper)
+    # Always use joker mode
+    ev = ev_remaining_joker(mask, upper, yahtzee_status)
 
     response = {
         'ev_remaining': round(ev, 2),
@@ -400,45 +391,37 @@ def game_ev():
         'upper': upper,
         'categories_filled': len(filled),
         'categories_remaining': 13 - len(filled),
-        'mode': mode,
+        'mode': 'joker',
+        'yahtzee_status': yahtzee_status,
     }
-
-    if mode == 'joker':
-        response['yahtzee_status'] = yahtzee_status
 
     return jsonify(response)
 
 
 @app.route('/api/modes', methods=['GET'])
 def get_available_modes():
-    """Return list of available game modes."""
+    """Return list of available game modes (only joker mode now)."""
     return jsonify({
         'modes': [
-            {
-                'id': 'traditional',
-                'name': 'Traditional',
-                'description': 'Standard Yahtzee rules without joker bonus'
-            },
             {
                 'id': 'joker',
                 'name': 'Joker Mode',
                 'description': 'With Yahtzee bonus chips (+100 for each additional Yahtzee)'
             },
         ],
-        'default': 'traditional'
+        'default': 'joker'
     })
 
 
 @app.route('/api/win_probability', methods=['POST'])
 def win_probability():
-    """Compute win probability for both players based on current game state."""
+    """Compute win probability for both players based on current game state (always joker mode)."""
     data = request.json
 
     p1_scores = data.get('player1_scores', {})
     p2_scores = data.get('player2_scores', {})
 
-    # Joker mode support
-    mode = data.get('mode', 'traditional')
+    # Joker mode parameters (joker mode is now the only mode)
     p1_yahtzee_status = data.get('player1_yahtzee_status', YAHTZEE_UNFILLED)
     p2_yahtzee_status = data.get('player2_yahtzee_status', YAHTZEE_UNFILLED)
     p1_yahtzee_bonuses = data.get('player1_yahtzee_bonuses', 0)
@@ -472,12 +455,9 @@ def win_probability():
     p1_upper_clamped = min(p1_upper, 63)
     p2_upper_clamped = min(p2_upper, 63)
 
-    if mode == 'joker':
-        p1_ev = ev_remaining_joker(p1_mask, p1_upper_clamped, p1_yahtzee_status)
-        p2_ev = ev_remaining_joker(p2_mask, p2_upper_clamped, p2_yahtzee_status)
-    else:
-        p1_ev = ev_remaining(p1_mask, p1_upper_clamped)
-        p2_ev = ev_remaining(p2_mask, p2_upper_clamped)
+    # Always use joker mode
+    p1_ev = ev_remaining_joker(p1_mask, p1_upper_clamped, p1_yahtzee_status)
+    p2_ev = ev_remaining_joker(p2_mask, p2_upper_clamped, p2_yahtzee_status)
 
     # Categories remaining
     p1_remaining = 13 - len(p1_filled)
@@ -488,14 +468,13 @@ def win_probability():
     p1_unfilled = all_cats - set(p1_filled)
     p2_unfilled = all_cats - set(p2_filled)
 
-    # Compute win probability with elimination check
-    is_joker = (mode == 'joker')
+    # Compute win probability with elimination check (always joker mode)
     p1_win, tie, p2_win = compute_win_probability(
         p1_total, p1_ev, p1_remaining,
         p2_total, p2_ev, p2_remaining,
         unfilled1=p1_unfilled, unfilled2=p2_unfilled,
         upper1=p1_upper, upper2=p2_upper,
-        is_joker_mode=is_joker,
+        is_joker_mode=True,
         yahtzee_status1=p1_yahtzee_status,
         yahtzee_status2=p2_yahtzee_status
     )
@@ -509,23 +488,33 @@ def win_probability():
         ev_diff, max_remaining
     )
 
+    # Include joker bonuses in totals
+    p1_total_with_bonus = p1_total + p1_yahtzee_bonuses * YAHTZEE_BONUS
+    p2_total_with_bonus = p2_total + p2_yahtzee_bonuses * YAHTZEE_BONUS
+
     response = {
         'player1': {
-            'current_score': p1_total,
+            'current_score': p1_total_with_bonus,
             'ev_remaining': round(p1_ev, 2),
-            'expected_final': round(p1_total + p1_ev, 2),
+            'expected_final': round(p1_total_with_bonus + p1_ev, 2),
             'categories_remaining': p1_remaining,
-            'win_probability': round(p1_win * 100, 1)
+            'win_probability': round(p1_win * 100, 1),
+            'yahtzee_status': p1_yahtzee_status,
+            'yahtzee_bonuses': p1_yahtzee_bonuses,
+            'bonus_points': p1_yahtzee_bonuses * YAHTZEE_BONUS,
         },
         'player2': {
-            'current_score': p2_total,
+            'current_score': p2_total_with_bonus,
             'ev_remaining': round(p2_ev, 2),
-            'expected_final': round(p2_total + p2_ev, 2),
+            'expected_final': round(p2_total_with_bonus + p2_ev, 2),
             'categories_remaining': p2_remaining,
-            'win_probability': round(p2_win * 100, 1)
+            'win_probability': round(p2_win * 100, 1),
+            'yahtzee_status': p2_yahtzee_status,
+            'yahtzee_bonuses': p2_yahtzee_bonuses,
+            'bonus_points': p2_yahtzee_bonuses * YAHTZEE_BONUS,
         },
         'tie_probability': round(tie * 100, 1),
-        'mode': mode,
+        'mode': 'joker',
         'approximation': {
             'method': 'normal',
             'has_edge_case': edge_case_info['has_edge_case'],
@@ -534,21 +523,6 @@ def win_probability():
             'exact_feasible': edge_case_info['exact_feasible']
         }
     }
-
-    # Add joker-specific info
-    if mode == 'joker':
-        response['player1']['yahtzee_status'] = p1_yahtzee_status
-        response['player1']['yahtzee_bonuses'] = p1_yahtzee_bonuses
-        response['player1']['bonus_points'] = p1_yahtzee_bonuses * YAHTZEE_BONUS
-        response['player2']['yahtzee_status'] = p2_yahtzee_status
-        response['player2']['yahtzee_bonuses'] = p2_yahtzee_bonuses
-        response['player2']['bonus_points'] = p2_yahtzee_bonuses * YAHTZEE_BONUS
-
-        # Adjust totals to include joker bonuses
-        response['player1']['current_score'] += p1_yahtzee_bonuses * YAHTZEE_BONUS
-        response['player1']['expected_final'] += p1_yahtzee_bonuses * YAHTZEE_BONUS
-        response['player2']['current_score'] += p2_yahtzee_bonuses * YAHTZEE_BONUS
-        response['player2']['expected_final'] += p2_yahtzee_bonuses * YAHTZEE_BONUS
 
     return jsonify(response)
 
@@ -569,8 +543,7 @@ def win_probability_exact():
     p1_scores = data.get('player1_scores', {})
     p2_scores = data.get('player2_scores', {})
 
-    # Joker mode parameters
-    mode = data.get('mode', 'traditional')
+    # Joker mode parameters (joker mode is now the only mode)
     p1_yahtzee_bonuses = data.get('player1_yahtzee_bonuses', 0)
     p2_yahtzee_bonuses = data.get('player2_yahtzee_bonuses', 0)
     p1_yahtzee_status = data.get('player1_yahtzee_status', YAHTZEE_UNFILLED)
@@ -596,10 +569,9 @@ def win_probability_exact():
     p1_total, p1_upper, p1_mask, p1_filled = get_state(p1_scores)
     p2_total, p2_upper, p2_mask, p2_filled = get_state(p2_scores)
 
-    # Add joker bonuses to current totals (already earned bonuses)
-    if mode == 'joker':
-        p1_total += p1_yahtzee_bonuses * YAHTZEE_BONUS
-        p2_total += p2_yahtzee_bonuses * YAHTZEE_BONUS
+    # Add joker bonuses to current totals (always joker mode)
+    p1_total += p1_yahtzee_bonuses * YAHTZEE_BONUS
+    p2_total += p2_yahtzee_bonuses * YAHTZEE_BONUS
 
     p1_remaining = 13 - len(p1_filled)
     p2_remaining = 13 - len(p2_filled)
@@ -613,24 +585,12 @@ def win_probability_exact():
         }), 400
 
     try:
-        if mode == 'joker':
-            # Use joker PMF solver (models yahtzee_status and future joker bonuses)
-            clear_pmf_joker_cache()
-            p1_win, tie_prob, p2_win = compute_win_probability_joker_exact(
-                p1_locked=p1_total, p1_mask=p1_mask, p1_upper=min(p1_upper, 63), p1_yahtzee_status=p1_yahtzee_status,
-                p2_locked=p2_total, p2_mask=p2_mask, p2_upper=min(p2_upper, 63), p2_yahtzee_status=p2_yahtzee_status
-            )
-            method = 'exact_pmf_joker'
-        else:
-            # Use traditional PMF solver
-            clear_pmf_cache()
-            state1 = PlayerState(score=p1_total, mask=p1_mask, upper=min(p1_upper, 63))
-            state2 = PlayerState(score=p2_total, mask=p2_mask, upper=min(p2_upper, 63))
-            result = compute_win_probs(state1, state2)
-            p1_win = result['win_prob']
-            tie_prob = result['tie_prob']
-            p2_win = result['lose_prob']
-            method = 'exact_pmf_traditional'
+        # Always use joker PMF solver (models yahtzee_status and future joker bonuses)
+        clear_pmf_joker_cache()
+        p1_win, tie_prob, p2_win = compute_win_probability_joker_exact(
+            p1_locked=p1_total, p1_mask=p1_mask, p1_upper=min(p1_upper, 63), p1_yahtzee_status=p1_yahtzee_status,
+            p2_locked=p2_total, p2_mask=p2_mask, p2_upper=min(p2_upper, 63), p2_yahtzee_status=p2_yahtzee_status
+        )
 
         return jsonify({
             'player1': {
@@ -644,7 +604,7 @@ def win_probability_exact():
                 'win_probability': round(p2_win * 100, 2)
             },
             'tie_probability': round(tie_prob * 100, 2),
-            'method': method,
+            'method': 'exact_pmf_joker',
             'feasible': True
         })
     except Exception as e:
