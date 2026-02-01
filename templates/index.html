@@ -1210,6 +1210,237 @@
         .joker-bonus-popup {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
+
+        /* ========== MOBILE OPTIMIZATION ========== */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                font-size: 14px;
+            }
+            h1 {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+            .game-area {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .scorecard {
+                padding: 10px;
+                border-radius: 8px;
+            }
+            .scorecard h2 {
+                font-size: 1.1em;
+                margin-bottom: 10px;
+                padding-bottom: 8px;
+            }
+            .score-row {
+                padding: 6px 8px;
+                font-size: 0.9em;
+            }
+            .score-input {
+                width: 50px;
+                padding: 4px 6px;
+                font-size: 14px;
+            }
+            .toggle-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            .center-panel {
+                padding: 10px;
+            }
+            .section-title {
+                font-size: 0.9em;
+                margin-bottom: 8px;
+            }
+            .dice-input-row {
+                gap: 6px;
+            }
+            .dice-input-wrapper {
+                width: 45px;
+            }
+            .dice-input-wrapper input {
+                font-size: 18px;
+                padding: 8px 4px;
+            }
+            .visual-dice {
+                font-size: 28px;
+                padding: 6px;
+            }
+            .player-selector {
+                gap: 8px;
+            }
+            .player-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            .rolls-selector {
+                gap: 6px;
+            }
+            .rolls-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .recommendation {
+                padding: 12px;
+                font-size: 0.9em;
+            }
+            .rec-action {
+                font-size: 1.1em;
+            }
+            .category-options {
+                gap: 6px;
+            }
+            .category-card {
+                padding: 8px 10px;
+                font-size: 0.85em;
+            }
+            .win-prob-bar {
+                width: 80px;
+            }
+            .win-prob-value {
+                min-width: 40px;
+                font-size: 0.9em;
+            }
+            .expected-score {
+                font-size: 0.75em;
+            }
+            .turn-indicator {
+                font-size: 0.85em;
+                padding: 6px 10px;
+            }
+            .keyboard-hint {
+                font-size: 0.75em;
+            }
+            .mode-indicator {
+                font-size: 0.7em;
+                padding: 3px 8px;
+            }
+            .get-rec-btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+            .action-buttons {
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .action-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .edge-case-container {
+                font-size: 0.8em;
+                padding: 6px;
+            }
+            .exact-calc-btn {
+                padding: 6px 12px;
+                font-size: 0.85em;
+            }
+            /* Hide keyboard hint on mobile - touch interface */
+            .keyboard-hint {
+                display: none;
+            }
+            /* Make dice larger for touch */
+            .visual-dice {
+                min-width: 40px;
+                min-height: 40px;
+            }
+            /* Compact player header */
+            .player-header {
+                gap: 4px;
+            }
+            /* Stack category options in 2 columns on mobile */
+            .category-options {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* Extra small screens (phones in portrait) */
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            h1 {
+                font-size: 1.3em;
+            }
+            .scorecard {
+                padding: 8px;
+            }
+            .score-row {
+                padding: 5px 6px;
+                font-size: 0.85em;
+            }
+            .score-input {
+                width: 45px;
+                font-size: 13px;
+            }
+            .toggle-btn {
+                padding: 5px 8px;
+                font-size: 11px;
+            }
+            .dice-input-wrapper {
+                width: 40px;
+            }
+            .dice-input-wrapper input {
+                font-size: 16px;
+                padding: 6px 2px;
+            }
+            .visual-dice {
+                font-size: 24px;
+                padding: 4px;
+            }
+            .player-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .rolls-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+            .recommendation {
+                padding: 10px;
+            }
+            .rec-action {
+                font-size: 1em;
+            }
+            .category-card {
+                padding: 6px 8px;
+                font-size: 0.8em;
+            }
+            .get-rec-btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+            /* Single column for category options on very small screens */
+            .category-options {
+                grid-template-columns: 1fr;
+            }
+            .win-prob-bar {
+                width: 60px;
+            }
+        }
+
+        /* Touch-friendly tap targets */
+        @media (pointer: coarse) {
+            .toggle-btn, .player-btn, .rolls-btn, .action-btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            .score-input {
+                min-height: 40px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            .dice-input-wrapper input {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            .category-card {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 <body>
