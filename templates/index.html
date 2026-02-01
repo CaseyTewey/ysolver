@@ -35,6 +35,28 @@
         @media (max-width: 1100px) {
             .game-area {
                 grid-template-columns: 1fr;
+                display: flex;
+                flex-direction: column;
+            }
+            /* On tablet/mobile, show scores container first, then center panel */
+            .scores-container {
+                order: 1;
+            }
+            .center-panel {
+                order: 2;
+            }
+        }
+
+        /* Scores container - holds both player scorecards */
+        .scores-container {
+            display: contents; /* On desktop, behave as if not there */
+        }
+        @media (max-width: 1100px) {
+            .scores-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                width: 100%;
             }
         }
 
@@ -173,6 +195,11 @@
         .score-row {
             display: flex;
             justify-content: space-between;
+        }
+        /* Category names - full by default, short on mobile */
+        .cat-name .short-name,
+        .player-name .short-name {
+            display: none;
             align-items: center;
             padding: 8px 10px;
             border-radius: 6px;
@@ -1222,30 +1249,84 @@
                 margin-bottom: 10px;
             }
             .game-area {
-                grid-template-columns: 1fr;
                 gap: 10px;
             }
+            /* Side-by-side scorecards on mobile */
+            .scores-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
             .scorecard {
-                padding: 10px;
+                padding: 8px;
                 border-radius: 8px;
             }
             .scorecard h2 {
+                font-size: 0.95em;
+                margin-bottom: 8px;
+                padding-bottom: 6px;
+            }
+            /* Compact player header for side-by-side */
+            .player-header {
+                gap: 2px;
+            }
+            .player-header > span:first-child {
+                font-weight: bold;
                 font-size: 1.1em;
-                margin-bottom: 10px;
-                padding-bottom: 8px;
+            }
+            .win-prob {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .win-prob-bar {
+                width: 60px;
+                height: 6px;
+            }
+            .win-prob-value {
+                font-size: 0.85em;
+                min-width: 35px;
+            }
+            .expected-score {
+                font-size: 0.7em;
             }
             .score-row {
-                padding: 6px 8px;
-                font-size: 0.9em;
+                padding: 4px 6px;
+                font-size: 0.8em;
+            }
+            .score-row .cat-name {
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            /* Show abbreviated names on mobile */
+            .cat-name .full-name,
+            .player-name .full-name,
+            .expected-score .full-name {
+                display: none;
+            }
+            .cat-name .short-name,
+            .player-name .short-name {
+                display: inline;
+            }
+            /* Make P1/P2 labels bold and prominent */
+            .player-name .short-name {
+                font-size: 1.3em;
+                font-weight: bold;
             }
             .score-input {
-                width: 50px;
-                padding: 4px 6px;
-                font-size: 14px;
+                width: 40px;
+                padding: 3px 4px;
+                font-size: 12px;
             }
             .toggle-btn {
-                padding: 6px 10px;
-                font-size: 12px;
+                padding: 4px 6px;
+                font-size: 10px;
+            }
+            /* Section totals more compact */
+            .section-total {
+                font-size: 0.8em;
+                padding: 4px 6px;
             }
             .center-panel {
                 padding: 10px;
@@ -1365,20 +1446,48 @@
             h1 {
                 font-size: 1.3em;
             }
+            /* Even more compact side-by-side scorecards */
+            .scores-container {
+                gap: 5px;
+            }
             .scorecard {
-                padding: 8px;
+                padding: 5px;
+            }
+            .scorecard h2 {
+                font-size: 0.85em;
+                margin-bottom: 5px;
+                padding-bottom: 4px;
+            }
+            .player-header > span:first-child {
+                font-size: 1em;
+            }
+            .win-prob-bar {
+                width: 50px;
+                height: 5px;
+            }
+            .win-prob-value {
+                font-size: 0.8em;
+                min-width: 30px;
+            }
+            .expected-score {
+                font-size: 0.65em;
             }
             .score-row {
-                padding: 5px 6px;
-                font-size: 0.85em;
+                padding: 3px 4px;
+                font-size: 0.75em;
             }
             .score-input {
-                width: 45px;
-                font-size: 13px;
+                width: 35px;
+                padding: 2px 3px;
+                font-size: 11px;
             }
             .toggle-btn {
-                padding: 5px 8px;
-                font-size: 11px;
+                padding: 3px 5px;
+                font-size: 9px;
+            }
+            .section-total {
+                font-size: 0.75em;
+                padding: 3px 4px;
             }
             .dice-input-wrapper {
                 width: 40px;
@@ -1475,22 +1584,42 @@
         <h1>Yahtzee Solver<span class="mode-indicator hidden" id="mode-indicator"></span></h1>
 
         <div class="game-area">
+            <!-- Scores Container - holds both player scorecards side by side on mobile -->
+            <div class="scores-container">
             <!-- Player 1 Scorecard -->
             <div class="scorecard" id="scorecard-1">
                 <h2>
                     <div class="player-header">
-                        <span>Player 1</span>
+                        <span class="player-name"><span class="full-name">Player 1</span><span class="short-name">P1</span></span>
                         <div class="win-prob">
                             <div class="win-prob-bar">
                                 <div class="win-prob-fill" id="win-prob-fill-1" style="width: 50%"></div>
                             </div>
                             <span class="win-prob-value" id="win-prob-1">50%</span>
                         </div>
-                        <span class="expected-score">Expected: <span id="expected-1">246</span></span>
+                        <span class="expected-score"><span class="full-name">Expected:</span> <span id="expected-1">246</span></span>
                     </div>
                 </h2>
                 <div id="scores-1"></div>
             </div>
+
+            <!-- Player 2 Scorecard -->
+            <div class="scorecard" id="scorecard-2">
+                <h2>
+                    <div class="player-header">
+                        <span class="player-name"><span class="full-name">Player 2</span><span class="short-name">P2</span></span>
+                        <div class="win-prob">
+                            <div class="win-prob-bar">
+                                <div class="win-prob-fill" id="win-prob-fill-2" style="width: 50%"></div>
+                            </div>
+                            <span class="win-prob-value" id="win-prob-2">50%</span>
+                        </div>
+                        <span class="expected-score"><span class="full-name">Expected:</span> <span id="expected-2">246</span></span>
+                    </div>
+                </h2>
+                <div id="scores-2"></div>
+            </div>
+            </div><!-- End scores-container -->
 
             <!-- Center Panel -->
             <div class="center-panel">
@@ -1594,23 +1723,6 @@
                         <div class="exact-result-values" id="exact-result-values"></div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Player 2 Scorecard -->
-            <div class="scorecard" id="scorecard-2">
-                <h2>
-                    <div class="player-header">
-                        <span>Player 2</span>
-                        <div class="win-prob">
-                            <div class="win-prob-bar">
-                                <div class="win-prob-fill" id="win-prob-fill-2" style="width: 50%"></div>
-                            </div>
-                            <span class="win-prob-value" id="win-prob-2">50%</span>
-                        </div>
-                        <span class="expected-score">Expected: <span id="expected-2">246</span></span>
-                    </div>
-                </h2>
-                <div id="scores-2"></div>
             </div>
         </div>
 
@@ -2581,19 +2693,19 @@
         }
 
         const categories = [
-            { id: 0, name: 'Ones', section: 'upper' },
-            { id: 1, name: 'Twos', section: 'upper' },
-            { id: 2, name: 'Threes', section: 'upper' },
-            { id: 3, name: 'Fours', section: 'upper' },
-            { id: 4, name: 'Fives', section: 'upper' },
-            { id: 5, name: 'Sixes', section: 'upper' },
-            { id: 6, name: 'Three of a Kind', section: 'lower' },
-            { id: 7, name: 'Four of a Kind', section: 'lower' },
-            { id: 8, name: 'Full House', section: 'lower', fixedScore: 25 },
-            { id: 9, name: 'Small Straight', section: 'lower', fixedScore: 30 },
-            { id: 10, name: 'Large Straight', section: 'lower', fixedScore: 40 },
-            { id: 11, name: 'Yahtzee', section: 'lower', fixedScore: 50 },
-            { id: 12, name: 'Chance', section: 'lower' }
+            { id: 0, name: 'Ones', short: '1s', section: 'upper' },
+            { id: 1, name: 'Twos', short: '2s', section: 'upper' },
+            { id: 2, name: 'Threes', short: '3s', section: 'upper' },
+            { id: 3, name: 'Fours', short: '4s', section: 'upper' },
+            { id: 4, name: 'Fives', short: '5s', section: 'upper' },
+            { id: 5, name: 'Sixes', short: '6s', section: 'upper' },
+            { id: 6, name: 'Three of a Kind', short: '3oK', section: 'lower' },
+            { id: 7, name: 'Four of a Kind', short: '4oK', section: 'lower' },
+            { id: 8, name: 'Full House', short: 'FH', section: 'lower', fixedScore: 25 },
+            { id: 9, name: 'Small Straight', short: 'SS', section: 'lower', fixedScore: 30 },
+            { id: 10, name: 'Large Straight', short: 'LS', section: 'lower', fixedScore: 40 },
+            { id: 11, name: 'Yahtzee', short: 'YTZ', section: 'lower', fixedScore: 50 },
+            { id: 12, name: 'Chance', short: 'CH', section: 'lower' }
         ];
 
         // Initialize scorecards
@@ -2602,13 +2714,13 @@
             let html = '';
 
             // Upper section header
-            html += `<div class="score-row section-header"><span>Upper Section</span></div>`;
+            html += `<div class="score-row section-header"><span class="cat-name"><span class="full-name">Upper Section</span><span class="short-name">Upper</span></span></div>`;
 
             // Upper categories
             categories.filter(c => c.section === 'upper').forEach(cat => {
                 html += `
                     <div class="score-row" id="row-${player}-${cat.id}">
-                        <span>${cat.name}</span>
+                        <span class="cat-name"><span class="full-name">${cat.name}</span><span class="short-name">${cat.short}</span></span>
                         <input type="number" class="score-input"
                                id="score-${player}-${cat.id}"
                                min="0" max="30"
@@ -2620,7 +2732,7 @@
             // Upper bonus
             html += `
                 <div class="score-row bonus">
-                    <span>Bonus (63+ = 35)</span>
+                    <span class="cat-name"><span class="full-name">Bonus (63+ = 35)</span><span class="short-name">Bonus</span></span>
                     <span class="score-display" id="bonus-${player}">0</span>
                 </div>
             `;
@@ -2628,13 +2740,13 @@
             // Upper total
             html += `
                 <div class="score-row section-header">
-                    <span>Upper Total</span>
+                    <span class="cat-name"><span class="full-name">Upper Total</span><span class="short-name">Upper</span></span>
                     <span class="score-display" id="upper-total-${player}">0</span>
                 </div>
             `;
 
             // Lower section header
-            html += `<div class="score-row section-header"><span>Lower Section</span></div>`;
+            html += `<div class="score-row section-header"><span class="cat-name"><span class="full-name">Lower Section</span><span class="short-name">Lower</span></span></div>`;
 
             // Lower categories
             categories.filter(c => c.section === 'lower').forEach(cat => {
@@ -2642,7 +2754,7 @@
                     // Fixed score categories get toggle buttons
                     html += `
                         <div class="score-row" id="row-${player}-${cat.id}">
-                            <span>${cat.name}</span>
+                            <span class="cat-name"><span class="full-name">${cat.name}</span><span class="short-name">${cat.short}</span></span>
                             <div class="fixed-score-toggle" id="toggle-${player}-${cat.id}">
                                 <button class="toggle-btn score-btn" onclick="setFixedScore(${player}, ${cat.id}, ${cat.fixedScore})">${cat.fixedScore}</button>
                                 <button class="toggle-btn zero-btn" onclick="setFixedScore(${player}, ${cat.id}, 0)">0</button>
@@ -2653,7 +2765,7 @@
                 } else {
                     html += `
                         <div class="score-row" id="row-${player}-${cat.id}">
-                            <span>${cat.name}</span>
+                            <span class="cat-name"><span class="full-name">${cat.name}</span><span class="short-name">${cat.short}</span></span>
                             <input type="number" class="score-input"
                                    id="score-${player}-${cat.id}"
                                    min="0" max="50"
@@ -2666,7 +2778,7 @@
             // Grand total
             html += `
                 <div class="score-row total">
-                    <span>GRAND TOTAL</span>
+                    <span class="cat-name"><span class="full-name">GRAND TOTAL</span><span class="short-name">TOTAL</span></span>
                     <span class="score-display" id="total-${player}">0</span>
                 </div>
             `;
