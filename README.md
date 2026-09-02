@@ -79,6 +79,35 @@ app recommends is exactly the keep the `M2` table assumed, and the exact distrib
 equals `M2 - EV^2` (checked to about 1e-10). The margins were measured on the three shipped tables:
 cross-path noise stays below 1e-13 and genuinely different keeps are never closer than 4e-9.
 
+How sure is it. The values are exact for the rule set, so the open question at any spot is how much
+the choice matters, not whether the number is right. Every recommendation therefore carries a
+confidence report (`Solver.decision_report`, the `confidence` field of `/api/recommend`, a line in
+`cli.py recommend`, a badge in the UI): the gap in expected final points between the best play and
+the runner-up, labelled clear (3 or more points), solid (1 to 3), close (0.25 to 1) or toss-up
+(under 0.25, either play is as good), plus forced when the Joker rule leaves one legal box. Exact
+ties are flagged with the tie-break that decided them. As a live sanity check, `cli.py simulate`,
+`/api/simulate` and the "Simulate this spot" button play the table's own policy from the current
+scorecard with random dice and report the sample mean against the table EV with its standard error;
+the two should agree within a few standard errors, and a z beyond 3 should happen about 0.3% of the
+time. Win probabilities are computed from the exact score distributions whenever that is cheap
+(each player at most four open boxes, or five with at most three upper boxes open); a button
+offers the exact figure up to seven open boxes; beyond that a normal approximation from each
+player's exact mean and standard deviation is used and the response says so (`confidence` on
+`/api/win_probability`). The approximation was calibrated on 324 matchups against exact
+distributions and 200,000-game simulations: absolute error usually (90th percentile) within 5
+points with 8 or more boxes open, 7 points at 5 to 7 open, and 10 points below that with a worst
+case of 22, which is why the exact figure is used automatically late in the game.
+
+Simulation check. An independent Monte Carlo simulator (its own dice, scoring, Joker legality and
+bonus accounting, consulting the engine only for decisions) played 400,000 games under HASBRO,
+400,000 under VERHOEFF and 100,000 under PLAIN: means within 1.2 standard errors of the table
+EVs, standard deviations within 0.25%, and under VERHOEFF every one of Verhoeff's 54 published
+statistics (per-box means and zero rates, bonus rates, Yahtzee counts, median 248) reproduced within
+3 standard errors. A further 400 individual states were simulated 20,000 games each with a
+standard-normal spread of z scores and no outliers, and an exact mini dynamic program agreed with
+the tables to 1e-13 on 239 end-game states. A naive keep-the-most-common-face policy scores 162
+under the same simulator, 92 points below optimal.
+
 Exact end-game distributions. `distribution.pmf_remaining` walks every outcome path under the
 optimal policy and returns the exact probability mass function of the remaining score, bonuses
 included. It is limited to 7 open boxes (`MAX_OPEN_FOR_EXACT`); on a 2025 laptop the slowest
@@ -162,6 +191,7 @@ One-offs kept in the repo:
     python cli.py ev --scores '{"0": 3, "1": 6, "2": 9}'                      # expected score and std for a state
     python cli.py pmf --scores '{"0":3,"1":6,"2":9,"3":12,"4":15,"5":18}' --final   # exact end-game distribution
     python cli.py match --p1 '{"11": 50, "3": 12}' --p2 '{"11": 0}' --p1-bonuses 1   # two-player win probability
+    python cli.py simulate --scores '{"11": 50, "3": 12}' --games 5000                   # Monte Carlo check of the table
     python cli.py precompute --rules verhoeff                                 # build a table
     python cli.py interactive                                                 # play a game with advice at every roll
     python cli.py <subcommand> --help                                         # options for each subcommand

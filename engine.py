@@ -430,6 +430,8 @@ def popcount(mask: int) -> int:
 
 def canonical_yb(mask: int, yahtzee_status: int) -> int:
     """yb is 1 only when the Yahtzee box is filled AND holds 50."""
+    if yahtzee_status not in (YAHTZEE_UNFILLED, YAHTZEE_SCRATCHED, YAHTZEE_SCORED):
+        raise ValueError("yahtzee_status must be 0 (unfilled), 1 (scratched) or 2 (scored 50)")
     return 1 if ((mask >> YAHTZEE) & 1) and yahtzee_status == YAHTZEE_SCORED else 0
 
 
@@ -656,6 +658,7 @@ class Solver:
     # ----- decisions -----
     def options(self, mask: int, upper: int, yb: int, rid: int):
         """(legal[13], pts[13], bonus) for one final roll under this rule set."""
+        self._check(mask, upper, yb)
         t = self.t
         r = self.rules
         legal = np.zeros(NUM_CATS, np.bool_)
@@ -686,6 +689,8 @@ class Solver:
     def category_options(self, mask: int, upper: int, yb: int, rid: int) -> List[dict]:
         """Every legal box for this final roll with immediate points and total EV, best first."""
         self._check(mask, upper, yb)
+        if mask == FULL_MASK:
+            raise ValueError("game is over: every box is filled")
         legal, pts, bonus = self.options(mask, upper, yb, rid)
         situation = self.joker_situation(mask, yb, rid)
         is_yz = bool(self.t.is_yz[rid])
@@ -769,6 +774,229 @@ class Solver:
                        keep_all=(sum(keep) == 5), keep_expected_value=keep_ev,
                        expected_value=self.roll_ev(mask, upper, yb, rid, rolls_remaining))
         return res
+
+    # ----- how confident is this recommendation? -----
+    def decision_report(self, mask: int, upper: int, yb: int, rid: int, rolls_remaining: int) -> dict:
+        """
+        Compare the recommended play with every alternative at this roll.
+
+        The values come from a fully solved table (exact under the rule set and verified against an
+        independent solver at every reachable state), so the question is never "is the number right"
+        but "how much does the choice matter". gap = best play minus runner-up in expected final
+        points; the label bands are in CONFIDENCE_BANDS. exact_tie marks a runner-up within TIE_TOL,
+        where the tie-break (fewest dice rerolled, then lowest box) decided.
+        """
+        self._check(mask, upper, yb)
+        rolls_remaining = parse_rolls_remaining(rolls_remaining)
+        t = self.t
+        if rolls_remaining == 0:
+            options = self.category_options(mask, upper, yb, rid)
+            cands = [{"play": f"score {o['name']}", "expected_value": float(o["expected_value"])} for o in options]
+            kind = "box"
+        else:
+            tv = self.turn(mask, upper, yb)
+            target = tv["e1"] if rolls_remaining == 2 else tv["e2"]
+            best_k = int(_argmax_sub(target, rid, t.sub_ptr, t.sub_idx))
+            ks = [int(k) for k in t.sub_idx[t.sub_ptr[rid]:t.sub_ptr[rid + 1]]]
+            ks.sort(key=lambda k: (k != best_k, -float(target[k]), -k))
+            cands = []
+            for k in ks:
+                kept = counts_to_dice_list(tuple(int(x) for x in t.keeps[k]))
+                name = "stand pat" if len(kept) == 5 else ("reroll everything" if not kept else "keep " + " ".join(map(str, kept)))
+                cands.append({"play": name, "expected_value": float(target[k])})
+            kind = "keep"
+        best = cands[0]
+        runner = cands[1] if len(cands) > 1 else None
+        gap = (best["expected_value"] - runner["expected_value"]) if runner else None
+        key, headline = confidence_label(gap)
+        near = sum(1 for c in cands[1:] if best["expected_value"] - c["expected_value"] < 0.25)
+        alternatives = [{"play": c["play"], "loss": best["expected_value"] - c["expected_value"]} for c in cands[1:4]]
+        report = {
+            "solved": "exact",
+            "basis": "Exact optimal-play table for this rule set, checked against an independent solver at every state.",
+            "decision": kind,
+            "label": key,
+            "headline": headline,
+            "gap": gap,
+            "best": best["play"],
+            "runner_up": runner["play"] if runner else None,
+            "alternatives": alternatives,
+            "near_ties": near,
+            "exact_tie": bool(runner and gap <= TIE_TOL),
+            "outcome_std": self.std(mask, upper, yb),
+        }
+        if report["exact_tie"]:
+            report["tie_note"] = ("Exactly tied with " + runner["play"] +
+                                  "; the tie went to the play that rerolls fewer dice" if kind == "keep"
+                                  else "Exactly tied with " + runner["play"] + "; the tie went to the earlier box")
+        return report
+
+    # ----- Monte Carlo sanity check -----
+    def _roll_lut(self) -> np.ndarray:
+        lut = getattr(self.t, "_enc_lut", None)
+        if lut is None:
+            pow6 = 6 ** np.arange(6)
+            lut = np.full(6 ** 6, -1, np.int64)
+            lut[(self.t.rolls * pow6).sum(axis=1)] = np.arange(NUM_ROLLS)
+            self.t._enc_lut = lut
+        return lut
+
+    def _policy_vectors(self, mask: int, upper: int, yb: int):
+        key = (mask, upper, yb)
+        cache = self.__dict__.setdefault("_policy_cache", OrderedDict())
+        hit = cache.get(key)
+        if hit is not None:
+            cache.move_to_end(key)
+            return hit
+        tv = self.turn(mask, upper, yb)
+        t = self.t
+        r = self.rules
+        keep1 = np.empty(NUM_ROLLS, np.int64)
+        keep2 = np.empty(NUM_ROLLS, np.int64)
+        gain = np.zeros(NUM_ROLLS, np.int64)
+        nmask = np.empty(NUM_ROLLS, np.int64)
+        nupper = np.empty(NUM_ROLLS, np.int64)
+        nyb = np.empty(NUM_ROLLS, np.int64)
+        _policy_vectors(r.joker_code, r.yahtzee_bonus, int(r.natural_yahtzee_fh), mask, upper, yb,
+                        t.score, t.joker_score, t.is_yz, t.yz_face, self.EV, tv["e1"], tv["e2"],
+                        t.sub_ptr, t.sub_idx, keep1, keep2, gain, nmask, nupper, nyb)
+        vecs = (keep1, keep2, gain, nmask, nupper, nyb)
+        cache[key] = vecs
+        if len(cache) > 4096:
+            cache.popitem(last=False)
+        return vecs
+
+    def simulate(self, mask: int, upper: int, yb: int, games: int = 2000, seed: Optional[int] = None) -> dict:
+        """
+        Play `games` games from this state with the table policy and random dice, and compare the
+        sample mean of the remaining score with the table EV. A sanity check, not a proof: the
+        table is exact, so |z| should look like a standard normal draw.
+        """
+        self._check(mask, upper, yb)
+        games = int(games)
+        if games < 1:
+            raise ValueError("games must be at least 1")
+        rng = np.random.default_rng(seed)
+        t = self.t
+        lut = self._roll_lut()
+        pow6 = 6 ** np.arange(6)
+        faces = np.arange(6)
+        cols = np.arange(5)
+        n = games
+        g_mask = np.full(n, mask, np.int64)
+        g_upper = np.full(n, upper, np.int64)
+        g_yb = np.full(n, yb, np.int64)
+        g_score = np.zeros(n, np.float64)
+
+        def roll_counts(kept_counts: np.ndarray) -> np.ndarray:
+            m = 5 - kept_counts.sum(axis=1)
+            rolled = rng.integers(0, 6, size=(n, 5))
+            active = cols[None, :] < m[:, None]
+            onehot = (rolled[:, :, None] == faces[None, None, :]) & active[:, :, None]
+            return kept_counts + onehot.sum(axis=1)
+
+        for _ in range(NUM_CATS - popcount(mask)):
+            keys = g_mask * 128 + g_upper * 2 + g_yb
+            uniq, inv = np.unique(keys, return_inverse=True)
+            vec_list = [self._policy_vectors(int(k) >> 7, (int(k) >> 1) & 63, int(k) & 1) for k in uniq]
+            K1 = np.stack([v[0] for v in vec_list])
+            K2 = np.stack([v[1] for v in vec_list])
+            GAIN = np.stack([v[2] for v in vec_list])
+            NM = np.stack([v[3] for v in vec_list])
+            NU = np.stack([v[4] for v in vec_list])
+            NY = np.stack([v[5] for v in vec_list])
+            counts = roll_counts(np.zeros((n, 6), np.int64))
+            rid = lut[counts @ pow6]
+            counts = roll_counts(t.keeps[K1[inv, rid]])
+            rid = lut[counts @ pow6]
+            counts = roll_counts(t.keeps[K2[inv, rid]])
+            rid = lut[counts @ pow6]
+            g_score += GAIN[inv, rid]
+            g_mask = NM[inv, rid]
+            g_upper = NU[inv, rid]
+            g_yb = NY[inv, rid]
+        g_score += np.where(g_upper >= UPPER_BONUS_THRESHOLD, UPPER_BONUS, 0)
+        ev = self.ev(mask, upper, yb)
+        table_std = self.std(mask, upper, yb)
+        mean = float(g_score.mean())
+        sd = float(g_score.std(ddof=1)) if n > 1 else 0.0
+        se = sd / math.sqrt(n) if n > 1 else float("nan")
+        z = (mean - ev) / se if se and se > 0 else 0.0
+        return {
+            "games": n,
+            "seed": seed,
+            "mean": mean,
+            "std": sd,
+            "se": se,
+            "table_ev": ev,
+            "table_std": table_std,
+            "z": z,
+            "consistent": abs(z) < 3.0,
+            "p5": float(np.percentile(g_score, 5)),
+            "p50": float(np.percentile(g_score, 50)),
+            "p95": float(np.percentile(g_score, 95)),
+            "min": float(g_score.min()),
+            "max": float(g_score.max()),
+        }
+
+
+
+
+# --------------------------------------------------------------------------------------
+# Policy vectors for simulation (one call per state: what the policy does for every roll)
+# --------------------------------------------------------------------------------------
+@njit(cache=True)
+def _policy_vectors(joker_code, yahtzee_bonus, natural_fh, mask, upper, yb,
+                    score, joker_score, is_yz, yz_face, EV, e1, e2, sub_ptr, sub_idx,
+                    keep1, keep2, gain, nmask, nupper, nyb):
+    """For every roll r: the keep after roll 1, the keep after roll 2, and for a final roll the
+    points gained (bonus included) and the successor state, all under the table policy."""
+    for r in range(NUM_ROLLS):
+        keep1[r] = _argmax_sub(e1, r, sub_ptr, sub_idx)
+        keep2[r] = _argmax_sub(e2, r, sub_ptr, sub_idx)
+    legal = np.zeros(NUM_CATS, np.bool_)
+    pts = np.zeros(NUM_CATS, np.int64)
+    for r in range(NUM_ROLLS):
+        bonus = _fill_options(joker_code, yahtzee_bonus, natural_fh, mask, yb, r,
+                              score, joker_score, is_yz, yz_face, legal, pts)
+        best = -1e18
+        for c in range(NUM_CATS):
+            if not legal[c]:
+                continue
+            nm = mask | (1 << c)
+            ny = yb
+            if c == YAHTZEE and is_yz[r]:
+                ny = 1
+            nu = upper
+            if c < 6:
+                nu = upper + pts[c]
+                if nu > MAX_UPPER:
+                    nu = MAX_UPPER
+            val = pts[c] + bonus + EV[nm, nu, ny]
+            if val > best:
+                best = val
+                gain[r] = pts[c] + bonus
+                nmask[r] = nm
+                nupper[r] = nu
+                nyb[r] = ny
+
+
+# Decision confidence: how far the best play is ahead of the runner-up, in expected final points
+CONFIDENCE_BANDS = (
+    (3.0, "clear", "Clear choice"),
+    (1.0, "solid", "Solid choice"),
+    (0.25, "close", "Close call"),
+    (0.0, "toss-up", "Toss-up: the top plays are equally good"),
+)
+
+
+def confidence_label(gap: Optional[float]) -> Tuple[str, str]:
+    if gap is None:
+        return "forced", "Forced: only one legal play"
+    for threshold, key, text in CONFIDENCE_BANDS:
+        if gap >= threshold:
+            return key, text
+    return "toss-up", CONFIDENCE_BANDS[-1][2]
 
 
 # --------------------------------------------------------------------------------------

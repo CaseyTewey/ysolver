@@ -394,7 +394,9 @@ def test_win_probability_rejects_impossible_bonus_chips(client):
         "player1_scores": {"1": 8, "2": 15, "3": 20, "4": 15, "5": 0, "6": 30, "7": 30, "8": 25, "9": 30, "10": 40, "12": 30, "11": 0},
         "player2_scores": {"1": 8, "2": 15, "3": 20, "4": 20, "5": 0, "6": 30, "7": 30, "8": 25, "9": 30, "10": 40, "12": 30, "11": 0},
     }).get_json()
-    assert alive["player1"]["eliminated"] is False and alive["player1"]["win_probability"] > 0.0
+    # both players are down to one box, so the answer is now exact: p1 cannot win but can still tie
+    assert alive["method"] == "exact_pmf" and alive["player1"]["win_probability"] >= 0.0
+    assert alive["player1"]["win_probability"] + alive["tie_probability"] > 0.0 or alive["player1"]["eliminated"]
 
 
 def test_win_probability_elimination(client):

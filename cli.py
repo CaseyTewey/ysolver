@@ -330,6 +330,9 @@ def format_recommendation(rec: dict, summary: dict, rules: Rules, max_rows: Opti
     note = joker_note(rec, rules)
     if note:
         lines.append(f"  Joker rule: {note}")
+    conf = rec.get("confidence")
+    if conf:
+        lines.append("  " + format_confidence(conf))
     lines.append("")
     lines.append(f"  {'Box':<17}{'Pts':>5}{'Exp. final':>12}")
     rows = options if max_rows is None else options[:max_rows]
@@ -340,6 +343,16 @@ def format_recommendation(rec: dict, summary: dict, rules: Rules, max_rows: Opti
     if max_rows is not None and len(options) > max_rows:
         lines.append(f"  ... {len(options) - max_rows} more")
     return lines
+
+
+def format_confidence(conf: dict) -> str:
+    """One line: how much the choice matters (the values themselves are exact)."""
+    if conf.get("exact_tie") and conf.get("tie_note"):
+        return f"Confidence: {conf['headline']}. {conf['tie_note']}."
+    if conf.get("gap") is None:
+        return f"Confidence: {conf['headline']}."
+    return (f"Confidence: {conf['headline']} ({conf['gap']:.2f} points ahead of '{conf['runner_up']}'"
+            + (f", {conf['near_ties']} more within 0.25)" if conf.get("near_ties") else ")"))
 
 
 def histogram(pmf: np.ndarray, offset: int = 0, max_bins: int = 20) -> dict:
@@ -392,6 +405,7 @@ def cmd_recommend(args, ctx: Context) -> int:
     if st.mask == FULL_MASK:
         raise CliError("every box is filled; the game is over")
     rec = solver.recommend(dice, st.mask, st.upper, st.yahtzee_status, rolls)
+    rec["confidence"] = solver.decision_report(st.mask, st.upper, st.yb, rid_of(dice), rolls)
     if ctx.json:
         rec["joker_note"] = joker_note(rec, solver.rules)
         rec["state"] = summary
@@ -403,6 +417,40 @@ def cmd_recommend(args, ctx: Context) -> int:
     print()
     print("\n".join(format_recommendation(rec, summary, solver.rules)))
     return 0
+
+
+def cmd_simulate(args, ctx: Context) -> int:
+    games = parse_int_arg(args.games, "games", 1, 1_000_000)
+    seed = None if args.seed is None else parse_int_arg(args.seed, "seed", 0, 2 ** 31 - 1)
+    solver = ctx.solver()
+    st, summary = summarise(solver, args.scores, 0)
+    if st.mask == FULL_MASK:
+        raise CliError("every box is filled; there is nothing left to simulate")
+    result = solver.simulate(st.mask, st.upper, st.yb, games=games, seed=seed)
+    if ctx.json:
+        emit_json({"ok": True, **result, "state": summary})
+        return 0
+    print(f"Rules: {solver.rules.key} ({RULES_DESCRIPTION.get(solver.rules.key, 'custom')})")
+    print("\n".join(format_state(summary)))
+    print()
+    print(f"Simulated {games:,} games from this spot with the table's own policy and random dice"
+          + (f" (seed {seed})" if seed is not None else "") + ":")
+    print(f"  remaining score: mean {result['mean']:.2f} +/- {result['se']:.2f} (table EV {result['table_ev']:.2f}),"
+          f"  std {result['std']:.2f} (table {result['table_std']:.2f})")
+    print(f"  p5 {result['p5']:.0f}   median {result['p50']:.0f}   p95 {result['p95']:.0f}   range {result['min']:.0f}-{result['max']:.0f}")
+    print(f"  z = {result['z']:+.2f}: " + ("consistent with the table" if result["consistent"] else
+                                            "more than 3 standard errors from the table (expected about 0.3% of the time); rerun with another seed"))
+    return 0
+
+
+def parse_int_arg(value, label: str, lo: int, hi: int) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        raise CliError(f"{label} must be a whole number")
+    if n < lo or n > hi:
+        raise CliError(f"{label} must be between {lo} and {hi}")
+    return n
 
 
 def cmd_ev(args, ctx: Context) -> int:
@@ -824,6 +872,7 @@ def build_parser() -> argparse.ArgumentParser:
   python cli.py ev --scores '{"0": 3, "1": 6, "2": 9}'
   python cli.py pmf --scores '{"0":3,"1":6,"2":9,"3":12,"4":15,"5":18}' --final
   python cli.py match --p1 '{"11": 50, "3": 12}' --p2 '{"11": 0}' --p1-bonuses 1
+  python cli.py simulate --scores '{"11": 50, "3": 12}' --games 5000
   python cli.py --rules plain precompute
   python cli.py interactive""")
     p.add_argument("--rules", choices=sorted(PRESETS), default="hasbro",
@@ -865,6 +914,13 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--max-open", type=int, default=MAX_OPEN_FOR_EXACT, metavar="K",
                    help=f"cap on open boxes for --exact (default {MAX_OPEN_FOR_EXACT})")
     m.set_defaults(func=cmd_match)
+
+    sm = sub.add_parser("simulate", parents=[common],
+                        help="play random games from a scorecard with the table policy and compare with the table EV")
+    sm.add_argument("--scores", default=None, help=scores_help)
+    sm.add_argument("--games", default=2000, help="number of games to simulate (default 2000)")
+    sm.add_argument("--seed", default=None, help="random seed for a reproducible run")
+    sm.set_defaults(func=cmd_simulate)
 
     b = sub.add_parser("precompute", parents=[common], help="build the table for the chosen rules")
     b.add_argument("--force", action="store_true", help="rebuild even if a table exists")

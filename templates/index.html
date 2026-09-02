@@ -1855,6 +1855,8 @@
                     Confirm Turn & Log
                 </button>
 
+                <div id="win-confidence" style="font-size: 11px; opacity: 0.75; margin: 6px 0 0 0;"></div>
+
                 <!-- Edge case warning and exact calculation -->
                 <div class="edge-case-container hidden" id="edge-case-container">
                     <div class="edge-case-warning" id="edge-case-warning">
@@ -2041,6 +2043,53 @@
         }
 
         // Update last calculation info
+        // How much to trust the displayed win probability (exact distributions vs normal approximation)
+        function renderWinConfidence(conf) {
+            const el = document.getElementById('win-confidence');
+            if (!el) return;
+            if (!conf) { el.textContent = ''; return; }
+            const tail = conf.label === 'approximate'
+                ? ` <span title="${escapeHtml(conf.note || '')}">(normal approximation; worst seen about ${conf.worst_error_pts} points off)</span>`
+                : ` <span title="${escapeHtml(conf.note || '')}">(exact score distributions)</span>`;
+            el.innerHTML = `Win %: <b>${escapeHtml(conf.headline)}</b>${tail}`;
+        }
+
+        // Play the table's own policy from the active player's spot with random dice and compare with the table EV
+        async function simulateSpot() {
+            const btn = document.getElementById('sim-btn');
+            const out = document.getElementById('sim-result');
+            if (!out) return;
+            const scores = {};
+            for (const [cat, score] of Object.entries(playerScores[activePlayer] || {})) {
+                const catNum = parseInt(cat);
+                if (!isNaN(catNum) && catNum >= 0 && catNum <= 12 && score !== undefined && score !== null) {
+                    scores[cat] = score;
+                }
+            }
+            if (btn) btn.disabled = true;
+            out.textContent = ' running 1,000 games...';
+            try {
+                const response = await fetch('/api/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scores: scores, yahtzee_status: getYahtzeeStatus(activePlayer), games: 1000 })
+                });
+                let data = null;
+                try { data = await response.json(); } catch (e) { data = null; }
+                if (!response.ok || !data || data.error) {
+                    out.textContent = ' ' + ((data && data.error) || `Server returned ${response.status}`);
+                } else {
+                    out.innerHTML = ` ${data.games.toLocaleString()} games: avg remaining <b>${fmtNum(data.mean)}</b> &plusmn; ${fmtNum(data.se)}` +
+                        ` vs table ${fmtNum(data.table_ev)} ` +
+                        (data.consistent ? '<span style="color: #4CAF50;">(consistent)</span>'
+                                         : '<span style="color: #FF9800;">(outside 3 standard errors, run again)</span>');
+                }
+            } catch (e) {
+                out.textContent = ' simulation failed';
+            }
+            if (btn) btn.disabled = false;
+        }
+
         function updateLastCalcInfo(mode, endpoint, ev) {
             const info = document.getElementById('last-calc-info');
             const evStr = ev ? ` (EV: ${ev})` : '';
@@ -3303,7 +3352,7 @@
 
                 const approx = data.approximation || {};
                 const hasEdgeCase = !!approx.has_edge_case;
-                const exactAvailable = !!(approx.exact_feasible || approx.suggest_exact);
+                const exactAvailable = !!approx.suggest_exact && !approx.exact_used;
 
                 edgeCaseWarning.classList.toggle('hidden', !hasEdgeCase);
                 edgeCaseReasons.innerHTML = hasEdgeCase && Array.isArray(approx.reasons)
@@ -3325,6 +3374,7 @@
                 checkForBigDrop(p1Win, p2Win);
 
                 // Update calc mode indicator
+                renderWinConfidence(data.confidence);
                 updateLastCalcInfo(data.mode || 'joker', 'win_prob', fmtNum(data.player1.expected_final));
 
             } catch (error) {
@@ -3374,6 +3424,7 @@
                     const p2Exact = data.player2.win_probability;
                     const tieProb = data.tie_probability || 0;
                     updateLastCalcInfo(data.mode || 'joker', 'win_prob_exact', fmtNum(data.player1.mean));
+                    renderWinConfidence(data.confidence);
 
                     exactResultValues.innerHTML = `P1: ${p1Exact}% | P2: ${p2Exact}%` +
                         (tieProb > 0 ? ` | Tie: ${tieProb}%` : '');
@@ -3798,13 +3849,17 @@
                     `;
                 } else {
                     const keepStr = keepDice.length > 0 ? keepDice.join(', ') : 'none';
+                    // Only happens under the Joker rule: standing pat would be forced into an upper box for less
+                    const breakNote = data.is_yahtzee_roll === true
+                        ? `<div style="margin-top: 6px; color: #ffd700; font-size: 12px;">Yes, really: standing pat would score this Yahtzee as a Joker${data.forced_category_name ? ' in ' + escapeHtml(data.forced_category_name) : ''}${data.joker_bonus_available ? ' (+100 either way)' : ''}; the reroll is worth more on average.</div>`
+                        : '';
                     html = `
                         <div class="rec-action" style="color: #2196F3;">REROLL RECOMMENDED</div>
                         <div class="rec-details">
                             Keep: [${keepStr}]<br>
                             Reroll: [${rerollDice.join(', ')}]
                         </div>
-                        ${jokerInfo}
+                        ${jokerInfo}${breakNote}
                         <div style="margin-top: 10px; padding: 8px; background: rgba(33, 150, 243, 0.2); border-radius: 6px; font-size: 12px;">
                             Click dice to change keep/reroll, then type your new roll
                         </div>
@@ -3838,6 +3893,27 @@
                     <div class="ev-value">${fmtNum(data.expected_value)}</div>
                 </div>
             `;
+
+            // How much the choice matters: gap to the runner-up (the values themselves are exact)
+            if (data.confidence) {
+                const c = data.confidence;
+                const colors = { clear: '#4CAF50', solid: '#8BC34A', close: '#FFC107', 'toss-up': '#FF9800', forced: '#9E9E9E' };
+                let detail = '';
+                if (c.exact_tie && c.tie_note) {
+                    detail = escapeHtml(c.tie_note);
+                } else if (c.gap !== null && c.gap !== undefined && c.runner_up) {
+                    detail = `${fmtNum(c.gap)} pts ahead of "${escapeHtml(c.runner_up)}"` + (c.near_ties ? `, ${c.near_ties} more within 0.25` : '');
+                }
+                html += `
+                    <div class="confidence" style="margin-top: 8px; font-size: 12px;">
+                        <span style="color: ${colors[c.label] || '#ccc'}; font-weight: bold;">${escapeHtml(c.headline)}</span>${detail ? ' <span style="opacity: 0.8;">' + detail + '</span>' : ''}
+                        <div style="opacity: 0.6; font-size: 11px; margin-top: 3px;">
+                            Exact solve, verified table. Outcome std ${fmtNum(c.outcome_std)} pts.
+                            <button id="sim-btn" onclick="simulateSpot()" style="margin-left: 6px; font-size: 11px; padding: 2px 6px; cursor: pointer;">Simulate this spot</button><span id="sim-result"></span>
+                        </div>
+                    </div>
+                `;
+            }
 
             recDiv.innerHTML = html;
 

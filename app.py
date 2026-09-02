@@ -51,6 +51,16 @@ MAX_SAVE_BYTES = 256 * 1024
 MAX_SAVE_DEPTH = 12           # a saved game nests turns > rolls > recommendation > options; 12 is generous
 MAX_YAHTZEE_BONUSES = 12      # the box takes one turn; at most 12 further Yahtzees can be rolled
 MIN_DISPLAY_PROB = 0.001      # a live (not eliminated) player never shows 0.0%
+MAX_SIM_GAMES = 2000          # /api/simulate cap: about a second of work
+
+# Error of the normal approximation used by /api/win_probability when the exact distributions are
+# not computed, in win-probability percentage points, keyed by the larger of the two players' open-box
+# counts: (usual = 90th percentile of the absolute error, worst seen). Measured on 324 matchups against
+# exact distributions and 200,000-game simulations; see README "How sure is it".
+APPROX_ERROR_PTS = {
+    13: (5, 8), 12: (5, 8), 11: (5, 8), 10: (5, 8), 9: (5, 8), 8: (5, 8),
+    7: (7, 10), 6: (7, 10), 5: (7, 10), 4: (10, 23), 3: (10, 23), 2: (10, 18), 1: (10, 18), 0: (0, 0),
+}
 
 app = Flask(__name__)
 
@@ -63,17 +73,6 @@ RULES = SOLVER.rules
 MODE = 'joker' if RULES.joker != 'none' else 'traditional'
 print(f"Solver ready. Rules: {RULES.key}. Fresh game EV: {SOLVER.fresh_ev:.4f} "
       f"(std {SOLVER.std(0, 0, 0):.4f})", flush=True)
-
-
-# High-variance categories (bimodal distributions), used by the edge case heuristics
-HIGH_VARIANCE_CATEGORIES = {
-    10,  # Large Straight (0 or 40)
-    11,  # Yahtzee (0 or 50)
-}
-MEDIUM_VARIANCE_CATEGORIES = {
-    8,   # Full House (0 or 25)
-    9,   # Small Straight (0 or 30)
-}
 
 
 # ------------------------------------------------------------------------------------------
@@ -216,47 +215,39 @@ def player_from_body(body: Dict[str, Any], prefix: str) -> PlayerView:
     return PlayerView(state, bonuses)
 
 
-def detect_edge_cases(unfilled1: set, unfilled2: set, upper1: int, upper2: int,
-                      ev_diff: float, cats_remaining: int, exact_feasible: bool) -> dict:
-    """Heuristics for when the normal approximation may be off. Returns the approximation block."""
-    reasons = []
+def win_confidence(exact: bool, max_open: int, exact_feasible: bool, tie: float = 0.0) -> dict:
+    """How much to trust a displayed win probability."""
+    if exact:
+        headline = 'Exact' + (f', tie {tie * 100:.1f}%' if tie >= 0.0005 else '')
+        return {'label': 'exact', 'headline': headline,
+                'note': 'Computed from the exact score distributions of both players under optimal play.'}
+    typical, worst = APPROX_ERROR_PTS.get(max_open, (5, 8))
+    note = ('Normal approximation from each player\'s exact expected score and standard deviation; ties are ignored. '
+            + ('The exact calculation is available for this position.' if exact_feasible else
+               f'The exact calculation becomes available once both players are down to {MAX_OPEN_FOR_EXACT} open boxes.'))
+    return {'label': 'approximate', 'headline': f'Approximate, usually within {typical} points',
+            'typical_error_pts': typical, 'worst_error_pts': worst, 'note': note}
 
-    p1_high_var = unfilled1 & HIGH_VARIANCE_CATEGORIES
-    p2_high_var = unfilled2 & HIGH_VARIANCE_CATEGORIES
-    if p1_high_var or p2_high_var:
-        cats = []
-        if 11 in p1_high_var or 11 in p2_high_var:
-            cats.append("Yahtzee")
-        if 10 in p1_high_var or 10 in p2_high_var:
-            cats.append("Large Straight")
-        reasons.append(f"High-variance categories remaining: {', '.join(cats)}")
 
-    # Upper bonus cliff: a 35 point swing still undecided
-    p1_upper_remaining = sum(1 for c in unfilled1 if c < 6)
-    p2_upper_remaining = sum(1 for c in unfilled2 if c < 6)
-    p1_max_upper_gain = sum((c + 1) * 5 for c in unfilled1 if c < 6)
-    p2_max_upper_gain = sum((c + 1) * 5 for c in unfilled2 if c < 6)
-    if p1_upper_remaining > 0 and 45 <= upper1 < 63 and upper1 + p1_max_upper_gain >= 63:
-        reasons.append(f"P1 upper bonus uncertain ({upper1}/63, {p1_upper_remaining} upper cats left)")
-    if p2_upper_remaining > 0 and 45 <= upper2 < 63 and upper2 + p2_max_upper_gain >= 63:
-        reasons.append(f"P2 upper bonus uncertain ({upper2}/63, {p2_upper_remaining} upper cats left)")
+def approximation_block(max_open: int, exact_feasible: bool, exact_used: bool) -> dict:
+    """The approximation summary the UI reads; the warning appears only when exact is available but unused."""
+    if exact_used:
+        return {'method': 'exact_pmf', 'has_edge_case': False, 'reasons': [], 'suggest_exact': False,
+                'exact_feasible': True, 'exact_used': True, 'max_open_for_exact': MAX_OPEN_FOR_EXACT}
+    typical, worst = APPROX_ERROR_PTS.get(max_open, (5, 8))
+    reason = (f"Normal approximation: at this stage of the game it is usually within {typical} points "
+              f"of the exact figure (worst measured {worst}).")
+    if exact_feasible:
+        reason += " The exact calculation is available for this position."
+    return {'method': 'normal_exact_moments', 'has_edge_case': exact_feasible, 'reasons': [reason],
+            'suggest_exact': exact_feasible, 'exact_feasible': exact_feasible, 'exact_used': False,
+            'max_open_for_exact': MAX_OPEN_FOR_EXACT}
 
-    if abs(ev_diff) < 20 and cats_remaining >= 3:
-        reasons.append(f"Close game (EV diff: {ev_diff:.1f}) with {cats_remaining} categories left")
 
-    p1_var_count = len(unfilled1 & (HIGH_VARIANCE_CATEGORIES | MEDIUM_VARIANCE_CATEGORIES))
-    p2_var_count = len(unfilled2 & (HIGH_VARIANCE_CATEGORIES | MEDIUM_VARIANCE_CATEGORIES))
-    if abs(p1_var_count - p2_var_count) >= 2:
-        reasons.append(f"Asymmetric variance (P1: {p1_var_count}, P2: {p2_var_count} high-variance cats)")
-
-    return {
-        'method': 'normal_exact_moments',
-        'has_edge_case': len(reasons) > 0,
-        'reasons': reasons,
-        'suggest_exact': exact_feasible,
-        'exact_feasible': exact_feasible,
-        'max_open_for_exact': MAX_OPEN_FOR_EXACT,
-    }
+def exact_is_cheap(p: "PlayerView") -> bool:
+    """The exact distribution takes well under a second unless several upper boxes are still open."""
+    open_upper = sum(1 for c in p.state.open_boxes if c < 6)
+    return p.boxes_remaining <= 4 or (p.boxes_remaining <= 5 and open_upper <= 3)
 
 
 @lru_cache(maxsize=64)
@@ -311,6 +302,8 @@ def recommend():
         'forced_category': rec['forced_category'],
         'forced_category_name': rec['forced_category_name'],
         'category_options': [category_option_json(o) for o in rec['category_options']],
+        'confidence': SOLVER.decision_report(state.mask, state.upper, state.yb,
+                                             roll_id(dice_list_to_counts(dice)), rolls_remaining),
     }
     if rec.get('joker_bonus'):
         response['joker_bonus'] = int(rec['joker_bonus'])
@@ -344,7 +337,7 @@ def score_options():
         {
             'category': cat,
             'name': CATEGORY_NAMES[cat],
-            'points': int(pts[cat]),
+            'points': int(pts[cat]) if legal[cat] else 0,
             'legal': bool(legal[cat]),
             'is_forced': bool(legal[cat]) and situation == 'forced_upper',
         }
@@ -401,14 +394,25 @@ def get_available_modes():
 
 @app.route('/api/win_probability', methods=['POST'])
 def win_probability():
-    """Normal approximation from each player's exact expected value and standard deviation."""
+    """Win, tie and lose chances. Exact from the two score distributions whenever that is cheap
+    (few boxes open), otherwise a normal approximation from each player's exact mean and std."""
     body = json_body()
     p1 = player_from_body(body, 'player1')
     p2 = player_from_body(body, 'player2')
+    max_open = max(p1.boxes_remaining, p2.boxes_remaining)
+    exact_feasible = (p1.boxes_remaining <= MAX_OPEN_FOR_EXACT
+                      and p2.boxes_remaining <= MAX_OPEN_FOR_EXACT)
+    exact_used = exact_feasible and exact_is_cheap(p1) and exact_is_cheap(p2)
 
     p1_eliminated = p1.max_final < p2.current_score
     p2_eliminated = p2.max_final < p1.current_score
-    if p1_eliminated and not p2_eliminated:
+    if exact_used:
+        pmf1 = pmf_for_state(p1.state.mask, p1.state.upper, p1.state.yb)
+        pmf2 = pmf_for_state(p2.state.mask, p2.state.upper, p2.state.yb)
+        p1_win, tie, p2_win = win_probabilities(pmf1, p1.locked, pmf2, p2.locked)
+        p1_eliminated = p1_eliminated or (p1_win == 0.0 and tie == 0.0)
+        p2_eliminated = p2_eliminated or (p2_win == 0.0 and tie == 0.0)
+    elif p1_eliminated and not p2_eliminated:
         p1_win, tie, p2_win = 0.0, 0.0, 1.0
     elif p2_eliminated and not p1_eliminated:
         p1_win, tie, p2_win = 1.0, 0.0, 0.0
@@ -416,19 +420,11 @@ def win_probability():
         p1_win, tie, p2_win = normal_win_probabilities(p1.expected_final, p1.std,
                                                        p2.expected_final, p2.std)
         # never display 0.0% for a player who is still mathematically alive
-        if p1_win < MIN_DISPLAY_PROB and not p1_eliminated:
-            p1_win, p2_win = MIN_DISPLAY_PROB, 1.0 - MIN_DISPLAY_PROB - tie
-        elif p2_win < MIN_DISPLAY_PROB and not p2_eliminated:
-            p2_win, p1_win = MIN_DISPLAY_PROB, 1.0 - MIN_DISPLAY_PROB - tie
-
-    ev_diff = p1.expected_final - p2.expected_final
-    exact_feasible = (p1.boxes_remaining <= MAX_OPEN_FOR_EXACT
-                      and p2.boxes_remaining <= MAX_OPEN_FOR_EXACT)
-    approximation = detect_edge_cases(
-        set(p1.state.open_boxes), set(p2.state.open_boxes),
-        p1.state.upper_raw, p2.state.upper_raw,
-        ev_diff, max(p1.boxes_remaining, p2.boxes_remaining), exact_feasible,
-    )
+        if tie == 0.0:
+            if p1_win < MIN_DISPLAY_PROB and not p1_eliminated:
+                p1_win, p2_win = MIN_DISPLAY_PROB, 1.0 - MIN_DISPLAY_PROB
+            elif p2_win < MIN_DISPLAY_PROB and not p2_eliminated:
+                p2_win, p1_win = MIN_DISPLAY_PROB, 1.0 - MIN_DISPLAY_PROB
 
     def block(p: PlayerView, win: float, eliminated: bool) -> dict:
         ev_shown = round(p.ev_remaining, 2)
@@ -438,7 +434,7 @@ def win_probability():
             'expected_final': round(p.current_score + ev_shown, 2),
             'std': round(p.std, 2),
             'categories_remaining': p.boxes_remaining,
-            'win_probability': round(win * 100, 1),
+            'win_probability': round(max(0.0, win) * 100, 1),
             'eliminated': bool(eliminated),
             'yahtzee_status': p.state.yahtzee_status,
             'yahtzee_bonuses': p.yahtzee_bonuses,
@@ -450,10 +446,33 @@ def win_probability():
         'player1': block(p1, p1_win, p1_eliminated),
         'player2': block(p2, p2_win, p2_eliminated),
         'tie_probability': round(tie * 100, 1),
+        'method': 'exact_pmf' if exact_used else 'normal_exact_moments',
         'mode': MODE,
         'rules': RULES.key,
-        'approximation': approximation,
+        'approximation': approximation_block(max_open, exact_feasible, exact_used),
+        'confidence': win_confidence(exact_used, max_open, exact_feasible, tie),
     })
+
+
+@app.route('/api/simulate', methods=['POST'])
+def simulate():
+    """Play the table policy from this scorecard with random dice and compare with the table EV."""
+    body = json_body()
+    state = scorecard_state(body)
+    games = int_field(body, 'games', 500, 1, MAX_SIM_GAMES)
+    seed = body.get('seed')
+    if seed is not None:
+        seed = int_field(body, 'seed', 0, 0, 2 ** 31 - 1)
+    if state.mask == FULL_MASK:
+        raise ValueError("game is over: every box is filled")
+    result = SOLVER.simulate(state.mask, state.upper, state.yb, games=games, seed=seed)
+    verdict = (f"{games:,} simulated games from this spot averaged {result['mean']:.1f} remaining points "
+               f"(standard error {result['se']:.1f}); the table says {result['table_ev']:.2f}. "
+               + ("Consistent." if result['consistent'] else
+                  "Further from the table than 3 standard errors, which should happen about 0.3% of the time; run it again."))
+    return jsonify({**result, 'verdict': verdict, 'mask': state.mask, 'upper': state.upper,
+                    'yahtzee_status': state.yahtzee_status, 'categories_remaining': state.boxes_remaining,
+                    'rules': RULES.key})
 
 
 @app.route('/api/win_probability_exact', methods=['POST'])
@@ -504,6 +523,7 @@ def win_probability_exact():
         'feasible': True,
         'mode': MODE,
         'rules': RULES.key,
+        'confidence': win_confidence(True, 0, True),
     })
 
 
