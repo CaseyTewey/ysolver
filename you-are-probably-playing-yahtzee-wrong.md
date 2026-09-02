@@ -10,9 +10,9 @@ You've been playing Yahtzee for years. You know the rules. You've developed "ins
 
 **Those instincts are costing you points. A lot of points.**
 
-Using a mathematically optimal Expected Value (EV) solver that computes exact probabilities across all 1.5 million possible game states, we've identified the most common mistakes players make. Some of these will surprise you. A few might make you angry. All of them are costing you games.
+Using a mathematically optimal Expected Value (EV) solver that computes exact probabilities across roughly 1 million game states, we've identified the most common mistakes players make. Some of these will surprise you. A few might make you angry. All of them are costing you games.
 
-**Baseline:** A perfect player scores **254.49 points** on average in Joker mode. How close are you?
+**Baseline:** A perfect player scores **254.59 points** on average under the official Hasbro rules. How close are you?
 
 ---
 
@@ -28,12 +28,12 @@ You roll `[1, 1, 3, 4, 5]` on your first roll. What do you keep?
 
 | Keep | EV |
 |------|-----|
-| [3, 4, 5] | **250.52** |
-| [1, 1] | 249.05 |
+| [3, 4, 5] | **250.62** |
+| [1, 1] | 249.17 |
 
-**Cost of the mistake: 1.47 points**
+**Cost of the mistake: 1.45 points**
 
-Here's the brutal truth: **a pair of 1s is worth less than rerolling all five dice** (249.05 vs 249.36). Ones contribute almost nothing to the upper bonus, and a pair is a weak foundation for anything.
+Here's the brutal truth: **a pair of 1s is worth less than rerolling all five dice** (249.17 vs 249.47). Ones contribute almost nothing to the upper bonus, and a pair is a weak foundation for anything.
 
 ### The 2-3-4-5 Straight Draw Is Gold
 
@@ -43,24 +43,24 @@ The biggest keeping mistake we found:
 
 | Keep | EV |
 |------|-----|
-| [2, 3, 4, 5] | **254.81** |
-| [2, 2] | 250.45 |
+| [2, 3, 4, 5] | **254.88** |
+| [2, 2] | 250.56 |
 
-**Cost of keeping the pair: 4.36 points**
+**Cost of keeping the pair: 4.32 points**
 
 The `[2, 3, 4, 5]` straight draw is so powerful it beats almost every pair:
 
 | Pair | EV | vs [2,3,4,5] |
 |------|-----|--------------|
-| Pair of 2s | 250.45 | Loses by 4.36 |
-| Pair of 3s | 251.30 | Loses by 3.51 |
-| Pair of 4s | 252.13 | Loses by 2.68 |
-| Pair of 5s | 252.91 | Loses by 1.90 |
-| **Pair of 6s** | **253.83** | **Only pair that wins** |
+| Pair of 2s | 250.56 | Loses by 4.32 |
+| Pair of 3s | 251.41 | Loses by 3.47 |
+| Pair of 4s | 252.24 | Loses by 2.63 |
+| Pair of 5s | 253.02 | Loses by 1.86 |
+| **Pair of 6s** | **253.94** | **Only pair that wins** |
 
 **Rule of thumb:** Unless you have a pair of 6s, abandon your pair for `[2, 3, 4, 5]`.
 
-*Source: `get_recommendation_joker()` analysis, fresh game state*
+*Source: `Solver.recommend()` analysis, fresh game state*
 
 ---
 
@@ -74,8 +74,8 @@ The `[2, 3, 4, 5]` straight draw is so powerful it beats almost every pair:
 
 | Keep | EV |
 |------|-----|
-| [6, 6] | **253.83** |
-| [5, 5, 6, 6] | 250.86 |
+| [6, 6] | **253.94** |
+| [5, 5, 6, 6] | 250.97 |
 
 **Cost of keeping both pairs: 2.97 points**
 
@@ -83,7 +83,7 @@ Full House is only worth 25 points. By keeping both pairs, you're limiting yours
 
 **This is never correct.** In every two-pair scenario we tested, keeping just the higher pair was optimal.
 
-*Source: `ev_solver.py:best_keep_roll1_joker()`, tested across 10+ two-pair combinations*
+*Source: `Solver.best_keep()`, tested across 10+ two-pair combinations*
 
 ---
 
@@ -95,14 +95,14 @@ Full House is only worth 25 points. By keeping both pairs, you're limiting yours
 
 | Keep | EV |
 |------|-----|
-| [3, 3, 3] | **259.55** |
-| [3, 4, 5] | 250.52 |
+| [3, 3, 3] | **259.65** |
+| [3, 4, 5] | 250.62 |
 
 Even with what looks like a good straight draw, trips are too valuable to break up. The Yahtzee/Full House potential dominates.
 
 **Every three-of-a-kind scenario we tested confirmed: never break up trips.**
 
-*Source: Exhaustive testing via `get_recommendation_joker()` across all trip combinations*
+*Source: Exhaustive testing via `Solver.recommend()` across all trip combinations*
 
 ---
 
@@ -116,8 +116,8 @@ Even with what looks like a good straight draw, trips are too valuable to break 
 
 | Action | EV |
 |--------|-----|
-| Keep [6,6,6,6] and reroll | **284.24** |
-| Take Four-of-a-Kind (26 pts) | 261.47 |
+| Keep [6,6,6,6] and reroll | **284.30** |
+| Take Four-of-a-Kind (26 pts) | 261.54 |
 
 **Cost of taking the points: 22.77 points**
 
@@ -125,7 +125,7 @@ This is one of the costliest mistakes in Yahtzee. With two rolls remaining, your
 
 **Always chase Yahtzee from quads.** There is no exception.
 
-*Source: `get_recommendation_joker()` and probability calculation: P(Yahtzee) = 1 - (5/6)^2 = 30.56%*
+*Source: `Solver.recommend()` and probability calculation: P(Yahtzee) = 1 - (5/6)^2 = 30.56%*
 
 ---
 
@@ -141,31 +141,31 @@ This is one of the costliest mistakes in Yahtzee. With two rolls remaining, your
 
 | Category | Points | Total EV |
 |----------|--------|----------|
-| Small Straight | 30 | **246.42** |
-| Scratch Four-of-a-Kind | 0 | 235.47 |
-| **Scratch Yahtzee** | **0** | **228.21** |
+| Small Straight | 30 | **246.56** |
+| Scratch Four-of-a-Kind | 0 | 235.54 |
+| **Scratch Yahtzee** | **0** | **228.58** |
 
-**Cost of scratching Yahtzee: 18.21 points**
+**Cost of scratching Yahtzee: 17.97 points**
 
-Even though you're scoring zero either way, scratching Yahtzee costs you **18 more points** than scratching Four-of-a-Kind. Why? Because Yahtzee is worth far more than 50 points.
+Even though you're scoring zero either way, scratching Yahtzee costs you **7 more points** than scratching Four-of-a-Kind (and 18 more than taking the Small Straight). Why? Because Yahtzee is worth far more than 50 points.
 
-### The True Value of Yahtzee: 92.6 Points
+### The True Value of Yahtzee: 92.2 Points
 
 Under Joker rules, scoring your first Yahtzee unlocks +100 bonuses for each additional Yahtzee. The solver calculates:
 
 | Yahtzee Status | EV Impact |
 |----------------|-----------|
-| Unfilled | 254.49 (baseline) |
-| Scored (50 pts) | 297.12 (+42.63 future bonus value) |
-| Scratched (0 pts) | 228.21 (-26.28) |
+| Unfilled | 254.59 (baseline) |
+| Scored (50 pts) | 296.84 (+42.25 future bonus value) |
+| Scratched (0 pts) | 228.58 (-26.01) |
 
-**Expected additional Yahtzees per game: 0.426**
+**Expected additional Yahtzees per game: 0.459**
 
-After scoring your first Yahtzee, you have about a 40% chance of rolling at least one more in the remaining turns. That's worth ~43 points in expectation.
+After scoring your first Yahtzee, you have about a 37% chance of rolling at least one more in the remaining turns. That's worth ~42 points in expectation.
 
 **Never scratch Yahtzee unless literally forced to on the final turn.**
 
-*Source: `ev_remaining_joker()` comparison across yahtzee_status values 0, 1, 2*
+*Source: `Solver.ev()` comparison across yahtzee_status values 0, 1, 2*
 
 ---
 
@@ -179,16 +179,16 @@ After scoring your first Yahtzee, you have about a 40% chance of rolling at leas
 
 | Category | Points | EV |
 |----------|--------|-----|
-| **Full House** | **25** | **231.79** |
-| Three-of-a-Kind | 27 | 230.83 |
+| **Full House** | **25** | **253.91** |
+| Three-of-a-Kind | 27 | 252.96 |
 
-**Cost of taking Three-of-a-Kind: 0.96 points**
+**Cost of taking Three-of-a-Kind: 0.95 points**
 
-Full House only appears in **4.0%** of rolls. Three-of-a-Kind appears in **29%**. The solver knows Full House is scarce and values preserving Three-of-a-Kind for later.
+Full House only appears in **3.9%** of rolls. Three-of-a-Kind appears in **21%**. The solver knows Full House is scarce and values preserving Three-of-a-Kind for later.
 
 **The crossover point is sum = 28.** Below that, take Full House. Above that, Three-of-a-Kind edges ahead slightly.
 
-*Source: `get_all_category_evs_joker()` analysis across full house rolls*
+*Source: `Solver.category_options()` analysis across full house rolls*
 
 ---
 
@@ -202,16 +202,16 @@ Full House only appears in **4.0%** of rolls. Three-of-a-Kind appears in **29%**
 
 | Action | EV |
 |--------|-----|
-| Take Large Straight (40 pts) | **261.52** |
-| Keep all and continue | **261.52** |
+| Take Large Straight (40 pts) | **261.53** |
+| Keep all and continue | **261.53** |
 
 **These are exactly equal.** The common belief that you should "go for Yahtzee" is wrong - but so is the guilt from taking the sure 40 points. Both plays are optimal.
 
-The math: From a Large Straight, your probability of Yahtzee is ~2.8% (must reroll one die twice and hit the same face both times). The tiny upside doesn't justify the variance.
+The math: From a Large Straight, your probability of Yahtzee is about 1.3% (keep one die and hit four matching dice across two rerolls). The tiny upside doesn't justify the variance.
 
 **Take the 40 and feel good about it.**
 
-*Source: `get_recommendation_joker([1,2,3,4,5], mask=0, upper=0, rolls=2, yahtzee_status=0)`*
+*Source: `Solver.recommend([1,2,3,4,5], mask=0, upper=0, yahtzee_status=0, rolls_remaining=2)`*
 
 ---
 
@@ -223,9 +223,9 @@ Across all 252 unique dice combinations, how often is each category the optimal 
 |------|----------|-----------|
 | 1 | Ones | 22.6% |
 | 2 | Twos | 15.5% |
-| 3 | Threes | 12.3% |
+| 3 | Chance | 12.3% |
 | 4 | Full House | 11.5% |
-| 5 | Chance | 11.1% |
+| 5 | Threes | 11.1% |
 | 6 | Fours | 6.0% |
 | 7 | Fives | 5.6% |
 | 8 | Small Straight | 5.6% |
@@ -237,7 +237,7 @@ Across all 252 unique dice combinations, how often is each category the optimal 
 
 **Four-of-a-Kind is never the optimal category choice in a fresh game.** There's always something better - usually an upper section category or Yahtzee itself.
 
-*Source: Exhaustive `get_all_category_evs_joker()` analysis over all 252 roll multisets*
+*Source: Exhaustive `Solver.category_options()` analysis over all 252 roll multisets*
 
 ---
 
@@ -249,18 +249,20 @@ Across all 252 unique dice combinations, how often is each category the optimal 
 
 **What most players think:** "It's nice if I get it, but I won't sacrifice points for it."
 
-**What the solver knows:** The bonus is worth **16.70 EV points** on average and drives many counterintuitive optimal plays.
+**What the solver knows:** The bonus is worth **23.8 EV points** on average and drives many counterintuitive optimal plays.
 
 ### Probability of Getting the Bonus
 
+From a fresh game the optimal player earns the bonus **68.1%** of the time. With the lower section already filled and all six upper boxes still open, the odds by upper total are:
+
 | Upper Total | P(Bonus) |
 |-------------|----------|
-| 0 | 47.7% |
-| 10 | 79.0% |
-| 20 | 97.3% |
+| 0 | 36.9% |
+| 10 | 79.5% |
+| 20 | 97.6% |
 | 30 | 99.9% |
 
-Under optimal play, you get the bonus about half the time. But those early upper section scores are crucial.
+Under optimal play, you get the bonus about two thirds of the time. But those early upper section scores are crucial.
 
 ### The Most Counterintuitive Play We Found
 
@@ -268,8 +270,8 @@ Under optimal play, you get the bonus about half the time. But those early upper
 
 | Category | Points | EV |
 |----------|--------|-----|
-| Chance | 19 | 238.84 |
-| **Ones** | **1** | **239.50** |
+| Chance | 19 | 238.96 |
+| **Ones** | **1** | **239.63** |
 
 **Taking 1 point in Ones beats taking 19 in Chance.**
 
@@ -285,7 +287,7 @@ This seems insane, but the solver knows: progress toward the upper bonus, even a
 
 **Pattern:** The solver prioritizes upper section progress, especially early in the game.
 
-*Source: `get_all_category_evs_joker()` comparison, fresh game states*
+*Source: `Solver.category_options()` comparison, fresh game states*
 
 ---
 
@@ -297,10 +299,10 @@ This seems insane, but the solver knows: progress toward the upper bonus, even a
 
 | Choice | Points | EV |
 |--------|--------|-----|
-| Fives (reach for bonus) | 15 | 177.71 |
-| **Full House (give up)** | **25** | **184.14** |
+| Fives (reach for bonus) | 15 | 177.93 |
+| **Full House (give up)** | **25** | **184.27** |
 
-**Cost of reaching: 6.43 points**
+**Cost of reaching: 6.34 points**
 
 When the bonus is mathematically unlikely, stop chasing it. The solver knows when to pivot.
 
@@ -309,7 +311,7 @@ When the bonus is mathematically unlikely, stop chasing it. The solver knows whe
 - Only Fives remain, need 38+ in other categories
 - If max possible upper < 63, take the sure points
 
-*Source: `ev_remaining_joker()` with restricted category masks*
+*Source: `Solver.ev()` with restricted category masks*
 
 ---
 
@@ -327,15 +329,15 @@ When the bonus is mathematically unlikely, stop chasing it. The solver knows whe
 
 | Action | EV |
 |--------|-----|
-| Keep [6, 6] and reroll | **247.66** |
-| Take Chance (21) | 240.84 |
-| Take Sixes (12) | 232.12 |
+| Keep [6, 6] and reroll | **247.78** |
+| Take Chance (21) | 240.96 |
+| Take Sixes (12) | 232.20 |
 
 **Cost of giving up: 6.82 points**
 
-Even after a bad roll, the EV of continuing usually beats taking immediate points. Yahtzee's massive value (92.6 total EV at game start) makes low-probability attempts worthwhile.
+Even after a bad roll, the EV of continuing usually beats taking immediate points. Yahtzee's massive value (92.2 total EV at game start) makes low-probability attempts worthwhile.
 
-*Source: `get_recommendation_joker()` roll 2 analysis*
+*Source: `Solver.recommend()` roll 2 analysis*
 
 ---
 
@@ -354,21 +356,21 @@ Even after a bad roll, the EV of continuing usually beats taking immediate point
 | Continue for Yahtzee | **52.26** |
 | Take Sixes (18) | 45.34 |
 
-**Cost of playing safe: 6.93 points**
+**Cost of playing safe: 6.92 points**
 
 Even in the final turns, Yahtzee pursuit is profitable. The +100 joker bonus potential (if Yahtzee is already scored) or the 50-point base (if not) makes the gamble worthwhile.
 
-*Source: `ev_remaining_joker()` late-game state analysis*
+*Source: `Solver.ev()` late-game state analysis*
 
 ---
 
 ## Summary: The 12 Commandments of Optimal Yahtzee
 
-1. **Abandon low pairs (1s, 2s) for `[2,3,4,5]` straight draws** - costs up to 4.36 EV
+1. **Abandon low pairs (1s, 2s) for `[2,3,4,5]` straight draws** - costs up to 4.32 EV
 2. **Never keep two pairs** - always keep only the higher pair
 3. **Always keep trips together** - never break up three-of-a-kind
 4. **Always chase Yahtzee from four-of-a-kind** - costs 22.77 EV to take early
-5. **Never scratch Yahtzee early** - it's worth 92.6 total EV, not 50
+5. **Never scratch Yahtzee early** - it's worth 92.2 total EV, not 50
 6. **Take Full House over 3K when sum < 28** - Full House is scarce
 7. **Large Straight on Roll 1 is fine to take** - no EV loss either way
 8. **Four-of-a-Kind is never optimal in a fresh game** - always something better
@@ -383,28 +385,28 @@ Even in the final turns, Yahtzee pursuit is profitable. The +100 joker bonus pot
 
 | Keep | EV | Notes |
 |------|-----|-------|
-| Four 6s | 284.24 | Best possible |
-| Four 5s | 281.63 | |
-| Four 4s | 279.24 | |
-| Four 3s | 276.70 | |
-| Four 2s | 273.83 | |
-| Four 1s | 270.21 | Still great |
-| Trip 6s | 265.02 | |
-| Trip 5s | 263.07 | |
-| Large Straight | 261.52 | Keep all 5! |
-| Trip 4s | 261.35 | |
-| Trip 3s | 259.55 | |
-| Trip 2s | 257.60 | |
-| Trip 1s | 254.89 | |
-| [2,3,4,5] draw | 254.81 | Beats most pairs |
-| Pair 6s | 253.83 | |
-| Pair 5s | 252.91 | |
-| Pair 4s | 252.13 | |
-| Pair 3s | 251.30 | |
-| [1,2,3,4] draw | 251.03 | |
-| Pair 2s | 250.45 | |
-| **Reroll all 5** | **249.36** | **Baseline** |
-| Pair 1s | 249.05 | Below baseline! |
+| Four 6s | 284.30 | Best possible |
+| Four 5s | 281.70 | |
+| Four 4s | 279.31 | |
+| Four 3s | 276.78 | |
+| Four 2s | 273.91 | |
+| Four 1s | 270.30 | Still great |
+| Trip 6s | 265.11 | |
+| Trip 5s | 263.17 | |
+| Large Straight | 261.53 | Keep all 5! |
+| Trip 4s | 261.45 | |
+| Trip 3s | 259.65 | |
+| Trip 2s | 257.70 | |
+| Trip 1s | 254.99 | |
+| [2,3,4,5] draw | 254.88 | Beats most pairs |
+| Pair 6s | 253.94 | |
+| Pair 5s | 253.02 | |
+| Pair 4s | 252.24 | |
+| Pair 3s | 251.41 | |
+| [1,2,3,4] draw | 251.13 | |
+| Pair 2s | 250.56 | |
+| **Reroll all 5** | **249.47** | **Baseline** |
+| Pair 1s | 249.17 | Below baseline! |
 
 **A pair of 1s is worse than rerolling all five dice.**
 
@@ -415,18 +417,18 @@ Even in the final turns, Yahtzee pursuit is profitable. The +100 joker bonus pot
 All analysis performed using the Yahtzee EV Solver with:
 
 - **Mode:** Joker rules (official Hasbro rules)
-- **State Space:** 2^13 category masks x 64 upper subtotals x 3 Yahtzee statuses = **1,572,864 states**
+- **State Space:** 2^13 category masks x 64 upper subtotals x 2 Yahtzee-bonus flags = **1,048,576 states**
 - **Roll Space:** 252 unique 5-dice multisets
 - **Computation:** Exact dynamic programming, no Monte Carlo approximation
 - **Functions Used:**
-  - `get_recommendation_joker()` - optimal keep/score decisions
-  - `get_all_category_evs_joker()` - category comparison
-  - `ev_remaining_joker()` - future game value
-  - `best_keep_roll1_joker()`, `best_keep_roll2_joker()` - keep optimization
+  - `Solver.recommend()` - optimal keep/score decisions
+  - `Solver.category_options()` - category comparison
+  - `Solver.ev()` - future game value
+  - `Solver.best_keep()` - keep optimization
 
 The solver computes mathematically optimal play by working backwards from all possible end states, weighting by exact multinomial probabilities for all dice outcomes.
 
-**Fresh game EV under optimal play: 254.49 points**
+**Fresh game EV under optimal play: 254.59 points**
 
 ---
 

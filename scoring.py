@@ -1,13 +1,13 @@
 """
-Yahtzee scoring functions and precomputation.
+Yahtzee scoring: the 13 boxes, the 252 x 13 score table and the Joker score table.
 
-This module handles:
-- Scoring each of the 13 categories
-- Precomputing score tables for all 252 roll states
-- Category enumeration and metadata
+The game rules that depend on state (Joker forcing, the 100 point Yahtzee bonus, which boxes
+are legal) live in ONE place, engine._fill_options. This module only says what a roll is worth
+in a box: score() under the normal rules, and get_joker_score_table() for a Yahtzee rolled after
+the Yahtzee box is filled (Full House 25, Small Straight 30, Large Straight 40).
 """
 
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 from enum import IntEnum
 import numpy as np
 from dice import Counts, enumerate_rolls, id_to_roll, roll_id
@@ -104,93 +104,34 @@ def _has_large_straight(counts: Counts) -> bool:
     return False
 
 
-def score(cat: int, counts: Counts, joker_rules: bool = False,
-          yahtzee_filled: bool = False, has_yahtzee_bonus: bool = False) -> int:
+def score(cat: int, counts: Counts) -> int:
     """
-    Calculate score for a given category and dice counts.
+    Points for scoring the roll `counts` in box `cat` under the normal rules.
 
-    Args:
-        cat: Category index (0-12)
-        counts: Tuple of counts for faces 1-6
-        joker_rules: Whether to apply Yahtzee joker rules
-        yahtzee_filled: Whether Yahtzee box is already filled
-        has_yahtzee_bonus: Whether player has scored a Yahtzee (for joker)
-
-    Returns:
-        Score for that category (0 if invalid)
+    A natural Yahtzee scores 0 in Full House and in the straights here. The Joker rule that
+    lets it count in full once the Yahtzee box is filled lives in engine._fill_options, which
+    reads get_joker_score_table() for those cases.
     """
-    # Handle Yahtzee joker rules
-    is_yahtzee = _is_yahtzee(counts)
-
-    if joker_rules and is_yahtzee and yahtzee_filled and has_yahtzee_bonus:
-        # Yahtzee joker: can score in any category with special rules
-        # Upper section: must use corresponding face
-        if cat in UPPER_CATEGORIES:
-            face_value = cat + 1
-            if counts[cat] == 5:
-                return face_value * 5
-            else:
-                # Forced to use upper section but wrong face
-                return 0
-
-        # Lower section with joker
-        if cat == Category.THREE_OF_A_KIND:
-            return _dice_sum(counts)
-        elif cat == Category.FOUR_OF_A_KIND:
-            return _dice_sum(counts)
-        elif cat == Category.FULL_HOUSE:
-            return 25  # Always scores 25 as joker
-        elif cat == Category.SMALL_STRAIGHT:
-            return 30  # Always scores 30 as joker
-        elif cat == Category.LARGE_STRAIGHT:
-            return 40  # Always scores 40 as joker
-        elif cat == Category.CHANCE:
-            return _dice_sum(counts)
-
-    # Standard scoring rules
     if cat in UPPER_CATEGORIES:
-        # Upper section: sum of matching face value
-        face_value = cat + 1
-        return counts[cat] * face_value
-
-    elif cat == Category.THREE_OF_A_KIND:
-        if _has_n_of_a_kind(counts, 3):
-            return _dice_sum(counts)
-        return 0
-
-    elif cat == Category.FOUR_OF_A_KIND:
-        if _has_n_of_a_kind(counts, 4):
-            return _dice_sum(counts)
-        return 0
-
-    elif cat == Category.FULL_HOUSE:
-        if _is_full_house(counts) or (is_yahtzee and joker_rules):
-            return 25
-        return 0
-
-    elif cat == Category.SMALL_STRAIGHT:
-        if _has_small_straight(counts):
-            return 30
-        return 0
-
-    elif cat == Category.LARGE_STRAIGHT:
-        if _has_large_straight(counts):
-            return 40
-        return 0
-
-    elif cat == Category.YAHTZEE:
-        if is_yahtzee:
-            return YAHTZEE_SCORE
-        return 0
-
-    elif cat == Category.CHANCE:
+        return counts[cat] * (cat + 1)
+    if cat == Category.THREE_OF_A_KIND:
+        return _dice_sum(counts) if _has_n_of_a_kind(counts, 3) else 0
+    if cat == Category.FOUR_OF_A_KIND:
+        return _dice_sum(counts) if _has_n_of_a_kind(counts, 4) else 0
+    if cat == Category.FULL_HOUSE:
+        return 25 if _is_full_house(counts) else 0
+    if cat == Category.SMALL_STRAIGHT:
+        return 30 if _has_small_straight(counts) else 0
+    if cat == Category.LARGE_STRAIGHT:
+        return 40 if _has_large_straight(counts) else 0
+    if cat == Category.YAHTZEE:
+        return YAHTZEE_SCORE if _is_yahtzee(counts) else 0
+    if cat == Category.CHANCE:
         return _dice_sum(counts)
-
     return 0
 
 
-def precompute_score_table(rolls: List[Counts] = None,
-                           joker_rules: bool = False) -> List[List[int]]:
+def precompute_score_table(rolls: List[Counts] = None) -> List[List[int]]:
     """
     Precompute scores for all roll/category combinations.
 
@@ -204,7 +145,7 @@ def precompute_score_table(rolls: List[Counts] = None,
     for counts in rolls:
         row = []
         for cat in range(NUM_CATEGORIES):
-            row.append(score(cat, counts, joker_rules=joker_rules))
+            row.append(score(cat, counts))
         score_table.append(row)
 
     return score_table
@@ -245,11 +186,11 @@ def calculate_upper_subtotal(filled_cats: Dict[int, int]) -> int:
 _SCORE_TABLE: List[List[int]] = None
 
 
-def get_score_table(joker_rules: bool = False) -> List[List[int]]:
+def get_score_table() -> List[List[int]]:
     """Get the precomputed score table, computing if necessary."""
     global _SCORE_TABLE
     if _SCORE_TABLE is None:
-        _SCORE_TABLE = precompute_score_table(joker_rules=joker_rules)
+        _SCORE_TABLE = precompute_score_table()
     return _SCORE_TABLE
 
 
@@ -291,37 +232,6 @@ def get_yahtzee_face(roll_idx: int) -> int:
     return -1  # Not a yahtzee
 
 
-def get_forced_category_joker(roll_idx: int, mask: int) -> Optional[int]:
-    """
-    For joker rules, determine if there's a forced category.
-
-    When a player rolls a Yahtzee and has already scored in the Yahtzee
-    category with 50 points, they must use the corresponding upper section
-    category if it's still available.
-
-    Args:
-        roll_idx: Roll index (0-251)
-        mask: 13-bit filled category mask (bit i=1 means category i is filled)
-
-    Returns:
-        Category index if forced, None if player has free choice
-    """
-    if not is_yahtzee_roll(roll_idx):
-        return None
-
-    face = get_yahtzee_face(roll_idx)
-    if face < 0:
-        return None
-
-    upper_cat = face  # Categories 0-5 correspond to faces 1-6 (0-indexed)
-
-    # Must use upper section if available
-    if not (mask & (1 << upper_cat)):
-        return upper_cat
-
-    return None  # Upper section filled, free to choose from lower section
-
-
 def get_joker_score_table() -> np.ndarray:
     """
     Get precomputed score table with joker exception rules.
@@ -360,49 +270,8 @@ def get_joker_score_table() -> np.ndarray:
     return table
 
 
-# Precomputed joker score table (lazy initialization)
-_JOKER_SCORE_TABLE: np.ndarray = None
-
-
-def get_joker_score_table_cached() -> np.ndarray:
-    """Get the precomputed joker score table, computing if necessary."""
-    global _JOKER_SCORE_TABLE
-    if _JOKER_SCORE_TABLE is None:
-        _JOKER_SCORE_TABLE = get_joker_score_table()
-    return _JOKER_SCORE_TABLE
-
-
-# Precomputed yahtzee detection arrays (lazy initialization)
-_IS_YAHTZEE: np.ndarray = None
-_YAHTZEE_FACE: np.ndarray = None
-
-
-def get_yahtzee_detection_arrays() -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Get precomputed arrays for fast yahtzee detection.
-
-    Returns:
-        Tuple of (is_yahtzee, yahtzee_face) arrays:
-        - is_yahtzee[roll_idx] = True if roll is a Yahtzee
-        - yahtzee_face[roll_idx] = face (0-5) if Yahtzee, -1 otherwise
-    """
-    global _IS_YAHTZEE, _YAHTZEE_FACE
-
-    if _IS_YAHTZEE is None:
-        _IS_YAHTZEE = np.array(
-            [is_yahtzee_roll(i) for i in range(NUM_ROLLS)],
-            dtype=np.bool_
-        )
-        _YAHTZEE_FACE = np.array(
-            [get_yahtzee_face(i) for i in range(NUM_ROLLS)],
-            dtype=np.int8
-        )
-
-    return _IS_YAHTZEE, _YAHTZEE_FACE
-
-
 if __name__ == "__main__":
-    from dice import dice_list_to_counts, roll_id
+    from dice import dice_list_to_counts
 
     # Test various scoring scenarios
     test_cases = [

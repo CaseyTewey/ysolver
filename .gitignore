@@ -32,3 +32,9 @@ node_modules/
 # Generated media
 media/
 Math-To-Manim/
+
+# solver tables are rebuilt on demand; only the shipped hasbro table is tracked (LFS)
+tables/*.npz
+!tables/ev_hasbro.npz
+game_results.json.lock
+.venv

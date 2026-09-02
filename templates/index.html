@@ -1910,11 +1910,8 @@
         let currentTurnData = null; // Data being collected for current turn
         let lastRecommendation = null; // Last recommendation from server
 
-        // Joker mode tracking per player
-        let yahtzeeStatus = {
-            1: 0,  // 0=unfilled, 1=scratched, 2=scored 50
-            2: 0
-        };
+        // Joker mode tracking per player. Yahtzee status (0 unfilled, 1 scratched, 2 scored 50) is
+        // always derived from the scorecard via getYahtzeeStatus(); only the +100 bonus chips are tracked.
         let yahtzeeBonuses = {
             1: 0,  // Count of +100 bonuses earned
             2: 0
@@ -1966,7 +1963,6 @@
             indicator.classList.remove('hidden');
 
             // Reset joker tracking
-            yahtzeeStatus = { 1: 0, 2: 0 };
             yahtzeeBonuses = { 1: 0, 2: 0 };
 
             // Always joker mode UI
@@ -2062,9 +2058,10 @@
             })
             .then(r => r.json())
             .then(data => {
-                document.getElementById('fresh-ev').textContent = data.ev_remaining;
-                updateLastCalcInfo(data.mode, 'game_ev', data.ev_remaining);
-            });
+                document.getElementById('fresh-ev').textContent = fmtNum(data.ev_remaining);
+                updateLastCalcInfo(data.mode || 'joker', 'game_ev', fmtNum(data.ev_remaining));
+            })
+            .catch(e => console.error('game_ev failed:', e));
         }
 
         // Show joker bonus display elements
@@ -2078,17 +2075,16 @@
         function updateJokerBonusDisplay(player) {
             if (!isJokerMode) return;
 
-            // Find or create the joker bonus row
+            // Find or create the Yahtzee bonus row, directly under the Yahtzee row of the scorecard
             let bonusRow = document.getElementById(`joker-bonus-row-${player}`);
             if (!bonusRow) {
-                // Create it after the yahtzee row
-                const yahtzeeRow = document.querySelector(`#player${player}-scores .score-row[data-category="11"]`);
+                const yahtzeeRow = document.getElementById(`row-${player}-11`);
                 if (yahtzeeRow) {
                     bonusRow = document.createElement('div');
                     bonusRow.id = `joker-bonus-row-${player}`;
                     bonusRow.className = 'score-row bonus';
                     bonusRow.innerHTML = `
-                        <span>Joker Bonus</span>
+                        <span class="cat-name"><span class="full-name">Yahtzee Bonus (100 each)</span><span class="short-name">Y.Bonus</span></span>
                         <span class="score-display" id="joker-bonus-${player}">-</span>
                     `;
                     yahtzeeRow.parentNode.insertBefore(bonusRow, yahtzeeRow.nextSibling);
@@ -2101,6 +2097,106 @@
                 const bonusCount = yahtzeeBonuses[player];
                 bonusDisplay.textContent = bonusCount > 0 ? `+${bonusCount * 100}` : '-';
             }
+        }
+
+        // ===== Shared game-state helpers =====
+
+        // Yahtzee status for the server, always read from the scorecard: 50 -> 2, 0 -> 1, empty -> 0
+        function getYahtzeeStatus(player) {
+            const v = playerScores[player] ? playerScores[player][11] : undefined;
+            if (v === undefined || v === null) return 0;
+            return Number(v) === 50 ? 2 : 1;
+        }
+
+        // The five dice on the table, or null when fewer than five real dice are entered
+        function getEnteredDice() {
+            const dice = getDice();
+            return dice.every(d => d !== null) ? dice : null;
+        }
+
+        // Does scoring `categoryId` with the dice on the table earn a +100 Yahtzee bonus?
+        // Must be asked BEFORE the box is written: the player's Yahtzee box has to already hold 50
+        // (a scratched 0 or an empty box earns nothing). Same condition the solver reports as
+        // joker_bonus_available for this roll, but read from the table so every scoring path agrees.
+        function yahtzeeBonusEarned(player, categoryId) {
+            if (categoryId === 11 || getYahtzeeStatus(player) !== 2) return false;
+            const dice = getEnteredDice();
+            return dice !== null && isYahtzee(dice);
+        }
+
+        // Credit the bonus chip when a turn is scored with a Yahtzee while the box already holds 50.
+        // Returns true when credited. Every path that writes a box calls this first.
+        function handleJokerScoring(player, categoryId) {
+            if (!yahtzeeBonusEarned(player, categoryId)) return false;
+            yahtzeeBonuses[player] = (yahtzeeBonuses[player] || 0) + 1;
+            console.log(`Player ${player} earned a Yahtzee bonus. Total: ${yahtzeeBonuses[player]}`);
+            showJokerBonusAnimation();
+            updateJokerBonusDisplay(player);
+            return true;
+        }
+
+        // Mirrors engine.allowed_scores: the values a box can legally hold
+        function isAllowedScore(category, value) {
+            if (!Number.isInteger(value) || value < 0) return false;
+            if (category < 6) return value % (category + 1) === 0 && value <= (category + 1) * 5;
+            if (category === 6 || category === 7 || category === 12) return value === 0 || (value >= 5 && value <= 30);
+            const fixed = { 8: 25, 9: 30, 10: 40, 11: 50 }[category];
+            return fixed !== undefined && (value === 0 || value === fixed);
+        }
+
+        // Dice to reroll: the roll minus the kept faces (each kept face removed once)
+        function rerollFromKeep(dice, keepDice) {
+            const keep = [...keepDice];
+            return dice.filter(d => {
+                const i = keep.indexOf(d);
+                if (i === -1) return true;
+                keep.splice(i, 1);
+                return false;
+            });
+        }
+
+        // Round to 2 decimals for display without trailing zeros (254.59, 246)
+        function fmtNum(x) {
+            const n = Number(x);
+            if (x === null || x === undefined || x === '' || !Number.isFinite(n)) return '--';
+            return String(Math.round(n * 100) / 100);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // EV under optimal play for the roll the solver last analysed vs. the EV of the chosen box.
+        // Nulls when the solver has not analysed this player's current dice.
+        function evForChoice(player, categoryId) {
+            const none = { optimalEV: null, actualEV: null };
+            const rec = lastRecommendation;
+            if (!rec || player !== activePlayer || !Array.isArray(rec.category_options)) return none;
+            const dice = getEnteredDice();
+            if (!dice || !Array.isArray(rec.dice) || dice.join(',') !== rec.dice.join(',')) return none;
+            const chosen = rec.category_options.find(c => c.category === categoryId);
+            const optimalEV = typeof rec.expected_value === 'number'
+                ? rec.expected_value
+                : (rec.category_options[0] ? rec.category_options[0].expected_value : null);
+            return { optimalEV: optimalEV, actualEV: chosen ? chosen.expected_value : null };
+        }
+
+        // Append the finished turn to the game log (used by every scoring path)
+        function recordTurn(player, categoryId, points) {
+            if (!currentTurnData) initTurn();
+            const { optimalEV, actualEV } = evForChoice(player, categoryId);
+            const known = optimalEV !== null && actualEV !== null;
+            gameLog.push({
+                turn: currentTurn,
+                player: player,
+                rolls: player === activePlayer ? [...currentTurnData.rolls] : [],
+                finalCategory: categories.find(c => c.id === categoryId)?.name || 'Unknown',
+                finalPoints: points,
+                optimalEV: optimalEV,
+                actualEV: actualEV,
+                evLoss: known ? Math.max(0, Math.round((optimalEV - actualEV) * 1e4) / 1e4) : 0
+            });
+            updateGameLogDisplay();
         }
 
         // Disable direct score input for true gameplay
@@ -2140,14 +2236,22 @@
 
         // Log a roll in the current turn
         function logRoll(dice, rollsRemaining, recommendation) {
-            if (gameMode !== 'true' || !currentTurnData) return;
+            if (!currentTurnData) initTurn();
 
-            currentTurnData.rolls.push({
+            const entry = {
                 dice: [...dice],
                 rollsRemaining: rollsRemaining,
                 recommendation: recommendation,
                 timestamp: new Date().toISOString()
-            });
+            };
+            // Re-analysing the same roll (corrected dice, repeated Enter) replaces the previous entry
+            const rolls = currentTurnData.rolls;
+            const last = rolls[rolls.length - 1];
+            if (last && last.rollsRemaining === rollsRemaining) {
+                rolls[rolls.length - 1] = entry;
+            } else {
+                rolls.push(entry);
+            }
         }
 
         // Toggle game log panel
@@ -2190,8 +2294,6 @@
 
         // Confirm turn and log it (True Gameplay mode) - shows category picker
         async function confirmTurn() {
-            if (gameMode !== 'true') return;
-
             if (!lastRecommendation) {
                 alert('Please enter your dice first. The recommendation will appear automatically.');
                 return;
@@ -2229,7 +2331,7 @@
                         <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 25px; max-width: 400px; width: 90%;">
                             <h3 style="margin-bottom: 15px; text-align: center;">Select Category to Score</h3>
                             <p style="color: rgba(255,255,255,0.5); font-size: 12px; text-align: center; margin-bottom: 15px;">
-                                Dice: [${getDiceForAPI().join(', ')}]
+                                Dice: [${getDice().map(d => d === null ? '?' : d).join(', ')}]
                             </p>
                             <div style="max-height: 300px; overflow-y: auto;">
                 `;
@@ -2252,7 +2354,7 @@
                         ">
                             <div style="display: flex; justify-content: space-between;">
                                 <span>${cat.name} ${isOptimal ? '(Optimal)' : ''}</span>
-                                <span style="color: #ffc107;">${cat.points} pts</span>
+                                <span style="color: #ffc107;">${cat.points} pts${cat.bonus ? ' + ' + cat.bonus + ' bonus' : ''}</span>
                             </div>
                             <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px;">
                                 EV: ${cat.expected_value.toFixed(1)}
@@ -2324,8 +2426,8 @@
                 // Joker mode info
                 mode: gameMode,
                 isJokerMode: isJokerMode,
-                player1_yahtzee_status: yahtzeeStatus[1],
-                player2_yahtzee_status: yahtzeeStatus[2],
+                player1_yahtzee_status: getYahtzeeStatus(1),
+                player2_yahtzee_status: getYahtzeeStatus(2),
                 player1_yahtzee_bonuses: yahtzeeBonuses[1],
                 player2_yahtzee_bonuses: yahtzeeBonuses[2]
             };
@@ -2363,7 +2465,7 @@
                 if (turn.evLoss > 0) {
                     playerStats.worstMoves.push(moveData);
                 }
-                if (turn.evLoss === 0) {
+                if (turn.evLoss === 0 && turn.optimalEV !== null && turn.optimalEV !== undefined) {
                     playerStats.bestMoves.push(moveData);
                 }
             });
@@ -2748,9 +2850,10 @@
                 diceEntered,
                 dice: getDice(),
                 playerScores: JSON.parse(JSON.stringify(playerScores)),
-                // Joker mode state
-                yahtzeeStatus: {...yahtzeeStatus},
-                yahtzeeBonuses: {...yahtzeeBonuses}
+                // Joker bonus chips and turn log position (yahtzee status is derived from playerScores)
+                yahtzeeBonuses: {...yahtzeeBonuses},
+                currentTurn: currentTurn,
+                gameLogLength: gameLog.length
             });
             // Keep only last 10 states
             if (history.length > 10) history.shift();
@@ -2807,24 +2910,44 @@
                 updateTotals(p);
             }
 
-            // Restore joker state if saved
-            if (state.yahtzeeStatus) {
-                yahtzeeStatus = {...state.yahtzeeStatus};
-            }
+            // Restore joker bonus chips (yahtzee status is derived from the restored scorecard)
             if (state.yahtzeeBonuses) {
                 yahtzeeBonuses = {...state.yahtzeeBonuses};
-                // Update joker bonus display
-                if (isJokerMode) {
-                    updateJokerBonusDisplay(1);
-                    updateJokerBonusDisplay(2);
-                }
+                updateJokerBonusDisplay(1);
+                updateJokerBonusDisplay(2);
+                updateTotals(1);
+                updateTotals(2);
+            }
+
+            // Roll the turn counter and the game log back to where they were
+            if (typeof state.currentTurn === 'number') currentTurn = state.currentTurn;
+            if (typeof state.gameLogLength === 'number' && gameLog.length > state.gameLogLength) {
+                gameLog.length = state.gameLogLength;
+                updateGameLogDisplay();
             }
 
             // Update UI
             updateCurrentDieIndicator();
             setActivePlayer(activePlayer);
             setRolls(rollsRemaining);
+            updateTurnDisplay();
+            initTurn();
+            lastRecommendation = null;
+            waitingForAction = false;
+            keptDiceIndices = [];
+            allDiceFilled = getEnteredDice() !== null;
             updateWinProbabilities();
+
+            // Re-analyse the restored roll so the scoring options come back
+            if (allDiceFilled) {
+                getRecommendation();
+            } else {
+                document.getElementById('recommendation').innerHTML = `
+                    <div class="rec-action">Enter dice and click above</div>
+                    <div class="rec-details">The solver will tell you the optimal play.</div>
+                `;
+                document.getElementById('category-options').innerHTML = '';
+            }
         }
 
         function clearDice() {
@@ -2881,7 +3004,7 @@
                         <span class="cat-name"><span class="full-name">${cat.name}</span><span class="short-name">${cat.short}</span></span>
                         <input type="number" class="score-input"
                                id="score-${player}-${cat.id}"
-                               min="0" max="30"
+                               min="0" max="${(cat.id + 1) * 5}" step="${cat.id + 1}"
                                onchange="updateScore(${player}, ${cat.id}, this.value)">
                     </div>
                 `;
@@ -2926,7 +3049,7 @@
                             <span class="cat-name"><span class="full-name">${cat.name}</span><span class="short-name">${cat.short}</span></span>
                             <input type="number" class="score-input"
                                    id="score-${player}-${cat.id}"
-                                   min="0" max="50"
+                                   min="0" max="30"
                                    onchange="updateScore(${player}, ${cat.id}, this.value)">
                         </div>
                     `;
@@ -2946,16 +3069,38 @@
 
         // Update score
         function updateScore(player, category, value) {
-            saveState();
+            const input = document.getElementById(`score-${player}-${category}`);
+            const previous = playerScores[player][category];
+            const wasFilled = previous !== undefined;
+
             if (value === '' || value === null) {
+                saveState();
                 delete playerScores[player][category];
                 document.getElementById(`row-${player}-${category}`).classList.remove('filled');
             } else {
-                playerScores[player][category] = parseInt(value);
+                const points = parseInt(value, 10);
+                if (!isAllowedScore(category, points)) {
+                    const name = categories.find(c => c.id === category)?.name || 'this box';
+                    alert(`${value} is not a possible score for ${name}.`);
+                    if (input) input.value = wasFilled ? previous : '';
+                    return;
+                }
+                saveState();
+                // A fresh entry (not a correction) scores the turn: credit a Yahtzee bonus if the dice earn one
+                if (!wasFilled) handleJokerScoring(player, category);
+                playerScores[player][category] = points;
+                if (input) input.value = points;
                 document.getElementById(`row-${player}-${category}`).classList.add('filled');
+                if (!wasFilled) recordTurn(player, category, points);
             }
             updateTotals(player);
             updateWinProbabilities();
+
+            if (isGameOver()) {
+                saveGameResults();
+                showEndGameScreen();
+                return;
+            }
 
             // Auto-deduce turn number and active player from board state
             calculateTurnFromBoard();
@@ -2984,6 +3129,9 @@
             // Clear active state from all buttons
             buttons.forEach(btn => btn.classList.remove('active'));
 
+            // Credit a Yahtzee bonus before the box is written (the box must already hold 50)
+            handleJokerScoring(player, category);
+
             // Set the value and mark as active
             hiddenInput.value = value;
             playerScores[player][category] = value;
@@ -2996,17 +3144,17 @@
                 toggle.querySelector('.zero-btn').classList.add('active');
             }
 
-            // Handle Yahtzee status tracking for joker mode
-            if (category === 11) { // Yahtzee category
-                if (value === 50) {
-                    yahtzeeStatus[player] = 2; // SCORED
-                } else {
-                    yahtzeeStatus[player] = 1; // SCRATCHED
-                }
-            }
+            // Yahtzee status (scored 50 / scratched) is read straight from the scorecard from here on
+            recordTurn(player, category, value);
 
             updateTotals(player);
             updateWinProbabilities();
+
+            if (isGameOver()) {
+                saveGameResults();
+                showEndGameScreen();
+                return;
+            }
 
             // Auto-deduce turn from board state
             calculateTurnFromBoard();
@@ -3043,6 +3191,15 @@
                 <div class="rec-details">The solver will tell you the optimal play.</div>
             `;
             document.getElementById('category-options').innerHTML = '';
+
+            // The previous turn's analysis must not leak into the next one
+            lastRecommendation = null;
+            const confirmBtn = document.getElementById('confirm-score-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Confirm Turn & Log';
+            }
+            initTurn();
         }
 
         // Update totals
@@ -3098,14 +3255,12 @@
                     player2_scores: playerScores[2]
                 };
 
-                // Add joker mode parameters
-                if (isJokerMode) {
-                    requestBody.mode = 'joker';
-                    requestBody.player1_yahtzee_status = yahtzeeStatus[1];
-                    requestBody.player2_yahtzee_status = yahtzeeStatus[2];
-                    requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
-                    requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
-                }
+                // Joker mode parameters: yahtzee status comes straight from each scorecard
+                requestBody.mode = 'joker';
+                requestBody.player1_yahtzee_status = getYahtzeeStatus(1);
+                requestBody.player2_yahtzee_status = getYahtzeeStatus(2);
+                requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
+                requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
 
                 const response = await fetch('/api/win_probability', {
                     method: 'POST',
@@ -3113,53 +3268,64 @@
                     body: JSON.stringify(requestBody)
                 });
 
-                const data = await response.json();
+                let data = null;
+                try { data = await response.json(); } catch (e) { data = null; }
+                if (!response.ok || !data || data.error || !data.player1 || !data.player2) {
+                    const msg = (data && (data.error || data.message)) || `server returned ${response.status}`;
+                    const info = document.getElementById('last-calc-info');
+                    info.textContent = `win_prob error: ${msg}`;
+                    info.className = 'last-calc-info';
+                    return;
+                }
 
                 // Update Player 1
                 const p1Win = data.player1.win_probability;
                 document.getElementById('win-prob-1').textContent = p1Win + '%';
                 document.getElementById('win-prob-fill-1').style.width = p1Win + '%';
                 document.getElementById('win-prob-fill-1').classList.toggle('losing', p1Win < 50);
-                document.getElementById('expected-1').textContent = data.player1.expected_final;
+                document.getElementById('expected-1').textContent = fmtNum(data.player1.expected_final);
 
                 // Update Player 2
                 const p2Win = data.player2.win_probability;
                 document.getElementById('win-prob-2').textContent = p2Win + '%';
                 document.getElementById('win-prob-fill-2').style.width = p2Win + '%';
                 document.getElementById('win-prob-fill-2').classList.toggle('losing', p2Win < 50);
-                document.getElementById('expected-2').textContent = data.player2.expected_final;
+                document.getElementById('expected-2').textContent = fmtNum(data.player2.expected_final);
 
-                // Handle edge case warnings
+                // Edge case warning and exact calculation. The server decides both: has_edge_case says the
+                // normal approximation may be off, exact_feasible / suggest_exact say the exact PMF is available
+                // (the server owns the box-count cap, the UI keeps no constant of its own).
                 const edgeCaseContainer = document.getElementById('edge-case-container');
                 const edgeCaseWarning = document.getElementById('edge-case-warning');
                 const edgeCaseReasons = document.getElementById('edge-case-reasons');
                 const exactCalcBtn = document.getElementById('exact-calc-btn');
                 const exactResult = document.getElementById('exact-result');
 
-                if (data.approximation && data.approximation.has_edge_case) {
-                    edgeCaseContainer.classList.remove('hidden');
-                    edgeCaseReasons.innerHTML = data.approximation.reasons.map(r => '• ' + r).join('<br>');
+                const approx = data.approximation || {};
+                const hasEdgeCase = !!approx.has_edge_case;
+                const exactAvailable = !!(approx.exact_feasible || approx.suggest_exact);
 
-                    // Show/hide exact calc button based on feasibility
-                    if (data.approximation.suggest_exact && data.approximation.exact_feasible) {
-                        exactCalcBtn.classList.remove('hidden');
-                        exactCalcBtn.disabled = false;
-                        exactCalcBtn.classList.remove('loading');
-                    } else {
-                        exactCalcBtn.classList.add('hidden');
-                    }
+                edgeCaseWarning.classList.toggle('hidden', !hasEdgeCase);
+                edgeCaseReasons.innerHTML = hasEdgeCase && Array.isArray(approx.reasons)
+                    ? approx.reasons.map(r => '• ' + escapeHtml(r)).join('<br>') : '';
 
-                    // Hide any previous exact result
-                    exactResult.classList.add('hidden');
+                if (exactAvailable) {
+                    exactCalcBtn.classList.remove('hidden');
+                    exactCalcBtn.disabled = false;
+                    exactCalcBtn.classList.remove('loading');
                 } else {
-                    edgeCaseContainer.classList.add('hidden');
+                    exactCalcBtn.classList.add('hidden');
                 }
+
+                // A new board state invalidates any previous exact result
+                exactResult.classList.add('hidden');
+                edgeCaseContainer.classList.toggle('hidden', !(hasEdgeCase || exactAvailable));
 
                 // Check for big drops (troll animation)
                 checkForBigDrop(p1Win, p2Win);
 
                 // Update calc mode indicator
-                updateLastCalcInfo(data.mode || 'traditional', 'win_prob', data.player1.expected_final);
+                updateLastCalcInfo(data.mode || 'joker', 'win_prob', fmtNum(data.player1.expected_final));
 
             } catch (error) {
                 console.error('Error updating win probabilities:', error);
@@ -3182,14 +3348,12 @@
                     player2_scores: playerScores[2]
                 };
 
-                // Add joker mode parameters
-                if (isJokerMode) {
-                    requestBody.mode = 'joker';
-                    requestBody.player1_yahtzee_status = yahtzeeStatus[1];
-                    requestBody.player2_yahtzee_status = yahtzeeStatus[2];
-                    requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
-                    requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
-                }
+                // Joker mode parameters: yahtzee status comes straight from each scorecard
+                requestBody.mode = 'joker';
+                requestBody.player1_yahtzee_status = getYahtzeeStatus(1);
+                requestBody.player2_yahtzee_status = getYahtzeeStatus(2);
+                requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
+                requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
 
                 const response = await fetch('/api/win_probability_exact', {
                     method: 'POST',
@@ -3197,15 +3361,19 @@
                     body: JSON.stringify(requestBody)
                 });
 
-                const data = await response.json();
+                let data = null;
+                try { data = await response.json(); } catch (e) { data = null; }
 
-                if (data.error) {
-                    exactResultValues.textContent = 'Error: ' + data.error;
+                if (!response.ok || !data || data.error || !data.player1 || !data.player2) {
+                    // A 400 means the server declined (too many boxes open, bad scorecard): show its message
+                    const msg = (data && (data.error || data.message)) || `Server returned ${response.status}`;
+                    exactResultValues.textContent = 'Error: ' + msg;
                 } else {
                     // Update the display with exact values
                     const p1Exact = data.player1.win_probability;
                     const p2Exact = data.player2.win_probability;
                     const tieProb = data.tie_probability || 0;
+                    updateLastCalcInfo(data.mode || 'joker', 'win_prob_exact', fmtNum(data.player1.mean));
 
                     exactResultValues.innerHTML = `P1: ${p1Exact}% | P2: ${p2Exact}%` +
                         (tieProb > 0 ? ` | Tie: ${tieProb}%` : '');
@@ -3226,11 +3394,11 @@
                 console.error('Error calculating exact win probability:', error);
                 exactResultValues.textContent = 'Calculation failed';
                 exactResult.classList.remove('hidden');
+            } finally {
+                // Never leave the spinner running
+                exactCalcBtn.classList.remove('loading');
+                exactCalcBtn.disabled = false;
             }
-
-            // Remove loading state
-            exactCalcBtn.classList.remove('loading');
-            exactCalcBtn.disabled = false;
         }
 
         // Set active player
@@ -3521,7 +3689,16 @@
 
         // Get recommendation from server
         async function getRecommendation() {
-            const dice = getDiceForAPI();
+            const dice = getEnteredDice();
+            if (!dice) {
+                // Never analyse placeholder dice: wait until all five are entered
+                document.getElementById('recommendation').innerHTML = `
+                    <div class="rec-action">Enter all five dice</div>
+                    <div class="rec-details">The solver analyses the roll once every die is entered.</div>
+                `;
+                document.getElementById('category-options').innerHTML = '';
+                return;
+            }
             const scores = {};
 
             // Convert scores to expected format (only valid numeric categories)
@@ -3540,11 +3717,10 @@
                     scores: scores
                 };
 
-                if (isJokerMode) {
-                    requestBody.mode = 'joker';
-                    requestBody.yahtzee_status = yahtzeeStatus[activePlayer];
-                    requestBody.yahtzee_bonuses = yahtzeeBonuses[activePlayer];
-                }
+                // Yahtzee status always comes from the scorecard, never from a cached variable
+                requestBody.mode = 'joker';
+                requestBody.yahtzee_status = getYahtzeeStatus(activePlayer);
+                requestBody.yahtzee_bonuses = yahtzeeBonuses[activePlayer];
 
                 const response = await fetch('/api/recommend', {
                     method: 'POST',
@@ -3552,21 +3728,27 @@
                     body: JSON.stringify(requestBody)
                 });
 
-                const data = await response.json();
+                let data = null;
+                try { data = await response.json(); } catch (e) { data = null; }
+                if (!response.ok || !data || data.error || !data.action) {
+                    const msg = (data && (data.error || data.message)) || `Server returned ${response.status}`;
+                    document.getElementById('recommendation').innerHTML = `
+                        <div class="rec-action" style="color: #f44336;">Error</div>
+                        <div class="rec-details">${escapeHtml(msg)}</div>
+                    `;
+                    return;
+                }
                 lastRecommendation = data;
                 displayRecommendation(data);
 
                 // Update calc mode indicator
-                updateLastCalcInfo(data.mode || 'traditional', 'recommend', data.expected_value);
+                updateLastCalcInfo(data.mode || 'joker', 'recommend', fmtNum(data.expected_value));
 
-                // Log the roll for true gameplay mode
-                if (gameMode === 'true' || gameMode === 'true-joker') {
-                    logRoll(dice, rollsRemaining, data);
-                    // Enable confirm button when recommendation is ready
-                    const confirmBtn = document.getElementById('confirm-score-btn');
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'Pick Category to Score';
-                }
+                // Log the roll (joker mode is the only mode) and enable the confirm button
+                logRoll(dice, rollsRemaining, data);
+                const confirmBtn = document.getElementById('confirm-score-btn');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Pick Category to Score';
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('recommendation').innerHTML = `
@@ -3581,24 +3763,56 @@
             const recDiv = document.getElementById('recommendation');
             let html = '';
 
-            if (data.action === 'keep') {
-                // Show which dice to keep
-                const keepStr = data.keep_dice.length > 0 ? data.keep_dice.join(', ') : 'none';
-                const rerollStr = data.reroll.length > 0 ? data.reroll.join(', ') : 'none';
+            // Joker rule notes describe the roll as it stands, whether the solver says keep or score
+            let jokerInfo = '';
+            const bonusPts = data.joker_bonus || (data.joker_bonus_available ? 100 : 0);
+            if (bonusPts) {
+                jokerInfo += `<div style="color: #ffd700; font-weight: bold;">+${bonusPts} YAHTZEE BONUS!</div>`;
+            }
+            const forced = data.forced_category !== undefined && data.forced_category !== null;
+            if (data.joker_rule === 'forced_upper' || forced) {
+                jokerInfo += `<div style="color: #ff6b6b;">FORCED: ${data.forced_category_name || 'matching upper box'}</div>`;
+            } else if (data.joker_rule === 'lower_only') {
+                jokerInfo += `<div style="color: #ffd700; font-size: 12px; margin-top: 4px;">Joker rule: must use an open lower box; Full House 25, Small Straight 30, Large Straight 40 count in full</div>`;
+            } else if (data.joker_rule === 'zero_upper') {
+                jokerInfo += `<div style="color: #ff6b6b; font-size: 12px; margin-top: 4px;">Joker rule: must take a zero in an open upper box</div>`;
+            }
 
-                html = `
-                    <div class="rec-action" style="color: #2196F3;">REROLL RECOMMENDED</div>
-                    <div class="rec-details">
-                        Keep: [${keepStr}]<br>
-                        Reroll: [${rerollStr}]
-                    </div>
-                    <div style="margin-top: 10px; padding: 8px; background: rgba(33, 150, 243, 0.2); border-radius: 6px; font-size: 12px;">
-                        Click dice to change keep/reroll, then type your new roll
-                    </div>
-                `;
+            if (data.action === 'keep') {
+                const dice = Array.isArray(data.dice) ? data.dice : (getEnteredDice() || []);
+                const keepDice = Array.isArray(data.keep_dice) ? data.keep_dice : [];
+                const rerollDice = Array.isArray(data.reroll) ? data.reroll : rerollFromKeep(dice, keepDice);
+                const keepAll = data.keep_all === true || rerollDice.length === 0;
+
+                if (keepAll) {
+                    // Keeping all five is optimal: nothing to reroll
+                    html = `
+                        <div class="rec-action" style="color: #4CAF50;">STAND PAT, NO REROLL</div>
+                        <div class="rec-details">
+                            Keep all five dice: [${keepDice.join(', ')}]
+                        </div>
+                        ${jokerInfo}
+                        <div style="margin-top: 10px; padding: 8px; background: rgba(76, 175, 80, 0.2); border-radius: 6px; font-size: 12px;">
+                            Rerolling gains nothing here. Pick a scoring option below (or click dice to reroll anyway)
+                        </div>
+                    `;
+                } else {
+                    const keepStr = keepDice.length > 0 ? keepDice.join(', ') : 'none';
+                    html = `
+                        <div class="rec-action" style="color: #2196F3;">REROLL RECOMMENDED</div>
+                        <div class="rec-details">
+                            Keep: [${keepStr}]<br>
+                            Reroll: [${rerollDice.join(', ')}]
+                        </div>
+                        ${jokerInfo}
+                        <div style="margin-top: 10px; padding: 8px; background: rgba(33, 150, 243, 0.2); border-radius: 6px; font-size: 12px;">
+                            Click dice to change keep/reroll, then type your new roll
+                        </div>
+                    `;
+                }
 
                 // Update visual dice
-                updateVisualDice(data.dice, data.keep_dice);
+                updateVisualDice(dice, keepDice);
 
                 // Show toggle hint
                 document.getElementById('dice-toggle-hint').classList.remove('hidden');
@@ -3606,19 +3820,10 @@
                 // Hide toggle hint for score recommendations
                 document.getElementById('dice-toggle-hint').classList.add('hidden');
 
-                // Build joker-specific info
-                let jokerInfo = '';
-                if (isJokerMode && data.joker_bonus_available) {
-                    jokerInfo = `<div style="color: #ffd700; font-weight: bold;">+100 JOKER BONUS!</div>`;
-                }
-                if (isJokerMode && data.forced_category !== undefined && data.forced_category !== null) {
-                    jokerInfo += `<div style="color: #ff6b6b;">FORCED: ${data.forced_category_name}</div>`;
-                }
-
                 html = `
                     <div class="rec-action">SCORE: ${data.category_name}</div>
                     <div class="rec-details">
-                        Points: ${data.points}${isJokerMode && data.joker_bonus ? ' + 100 bonus' : ''}
+                        Points: ${data.points}${bonusPts ? ` + ${bonusPts} bonus` : ''}
                     </div>
                     ${jokerInfo}
                     <div style="margin-top: 10px; padding: 8px; background: rgba(76, 175, 80, 0.2); border-radius: 6px; font-size: 12px;">
@@ -3630,14 +3835,14 @@
             html += `
                 <div class="ev-display">
                     <div>Expected Value</div>
-                    <div class="ev-value">${data.expected_value}</div>
+                    <div class="ev-value">${fmtNum(data.expected_value)}</div>
                 </div>
             `;
 
             recDiv.innerHTML = html;
 
             // Update category options
-            displayCategoryOptions(data.category_options);
+            displayCategoryOptions(data.category_options || []);
 
             // Mark that we're waiting for user action
             waitingForAction = true;
@@ -3711,7 +3916,7 @@
                             ${isDisabled ? '<span class="click-hint">(filled)</span>' : '<span class="click-hint">(click)</span>'}
                         </span>
                         <span>
-                            <span class="cat-pts">${opt.points} pts</span>
+                            <span class="cat-pts">${opt.points} pts${opt.bonus ? ' + ' + opt.bonus + ' bonus' : ''}</span>
                             <span class="cat-ev" title="Total expected: ${opt.points} now + future value">Total: ${opt.expected_value.toFixed(1)}</span>
                             ${evDiffStr}
                         </span>
@@ -3742,43 +3947,9 @@
                 return;
             }
 
-            // Handle joker mode tracking before scoring
-            if (isJokerMode) {
-                handleJokerScoring(activePlayer, categoryId, points);
-            }
-
-            // In True Gameplay mode, log the turn
-            if (gameMode === 'true' || gameMode === 'true-joker') {
-                console.log('Calling logAndScoreTurn');
-                logAndScoreTurn(categoryId, points);
-                return;
-            }
-
-            // Free play mode - just score directly
-            console.log('Calling scoreCategoryFreePlay');
-            scoreCategoryFreePlay(categoryId, points);
-        }
-
-        // Handle joker scoring: track yahtzee status and award bonuses
-        function handleJokerScoring(player, categoryId, points) {
-            // Check if this is a yahtzee roll
-            const isYahtzeeRoll = lastRecommendation && lastRecommendation.is_yahtzee_roll;
-
-            // Update yahtzee status when scoring in Yahtzee category (11)
-            if (categoryId === 11) {
-                yahtzeeStatus[player] = points === 50 ? 2 : 1;
-                console.log(`Player ${player} yahtzee status updated to ${yahtzeeStatus[player]}`);
-            }
-
-            // Award joker bonus if rolling another yahtzee after scoring 50
-            if (isYahtzeeRoll && yahtzeeStatus[player] === 2 && categoryId !== 11) {
-                yahtzeeBonuses[player]++;
-                console.log(`Player ${player} earned joker bonus! Total: ${yahtzeeBonuses[player]}`);
-                showJokerBonusAnimation();
-            }
-
-            // Update the bonus display
-            updateJokerBonusDisplay(player);
+            // Joker mode is the only mode: log and score the turn (the Yahtzee bonus is credited there)
+            console.log('Calling logAndScoreTurn');
+            logAndScoreTurn(categoryId, points);
         }
 
         // Show joker bonus animation
@@ -3820,6 +3991,9 @@
                 if (!playerScores[activePlayer]) {
                     playerScores[activePlayer] = {};
                 }
+
+                // Credit a Yahtzee bonus before the box is written
+                handleJokerScoring(activePlayer, categoryId);
 
                 // Update the score
                 playerScores[activePlayer][categoryId] = points;
@@ -3863,29 +4037,18 @@
                     initTurn();
                 }
 
-                // Get category info
-                const categoryName = categories.find(c => c.id === categoryId)?.name || 'Unknown';
+                // Already filled (double click, stale options): ignore
+                if (playerScores[activePlayer][categoryId] !== undefined) {
+                    console.log('Category already filled');
+                    return;
+                }
 
-            // Calculate EV loss
-            let optimalEV = 0;
-            let actualEV = 0;
-            if (lastRecommendation && lastRecommendation.category_options) {
-                const filled = Object.keys(playerScores[activePlayer])
-                    .map(k => parseInt(k))
-                    .filter(k => !isNaN(k));
-                const availableOptions = lastRecommendation.category_options.filter(c => !filled.includes(c.category));
-                const optimalOption = availableOptions[0];
-                const actualOption = lastRecommendation.category_options.find(c => c.category === categoryId);
-                optimalEV = optimalOption?.expected_value || 0;
-                actualEV = actualOption?.expected_value || 0;
-            }
+                // Snapshot for Undo, then credit a Yahtzee bonus before the box is written
+                saveState();
+                handleJokerScoring(activePlayer, categoryId);
 
-            // Set turn data
-            currentTurnData.finalCategory = categoryName;
-            currentTurnData.finalPoints = points;
-            currentTurnData.optimalEV = optimalEV;
-            currentTurnData.actualEV = actualEV;
-            currentTurnData.evLoss = Math.max(0, optimalEV - actualEV);
+            // Log the turn: EV loss against the solver's last analysis of this roll
+            recordTurn(activePlayer, categoryId, points);
 
             // Update player scores
             playerScores[activePlayer][categoryId] = points;
@@ -3895,10 +4058,6 @@
 
             updateTotals(activePlayer);
             updateWinProbabilities();
-
-            // Add to game log
-            gameLog.push({...currentTurnData});
-            updateGameLogDisplay();
 
             // Reset state
             waitingForAction = false;
@@ -3912,20 +4071,11 @@
                 return;
             }
 
-            // Advance to next turn
-            currentTurn++;
-            const nextPlayer = activePlayer === 1 ? 2 : 1;
-            console.log('Switching to player:', nextPlayer, 'turn:', currentTurn);
-
+            // Advance to the next turn: whoever has fewer boxes filled plays next (same rule as direct entry)
             setTimeout(() => {
-                activePlayer = nextPlayer;
-                setActivePlayer(activePlayer);
-                clearDiceForNewTurn();
-                initTurn();
-                lastRecommendation = null;
-                const confirmBtn = document.getElementById('confirm-score-btn');
-                if (confirmBtn) confirmBtn.disabled = true;
-                console.log('Turn switch complete, now player:', activePlayer);
+                calculateTurnFromBoard();
+                clearDiceForNewTurn();   // also resets lastRecommendation, the confirm button and currentTurnData
+                console.log('Turn switch complete, now player:', activePlayer, 'turn:', currentTurn);
             }, 300);
 
             } catch (error) {
@@ -3969,15 +4119,6 @@
             console.log('Score UI updated successfully');
         }
 
-        // Get dice for API (default to 1 for unfilled)
-        function getDiceForAPI() {
-            return [1, 2, 3, 4, 5].map(i => {
-                const val = parseInt(document.getElementById(`die-${i}`).value);
-                if (isNaN(val) || val < 1 || val > 6) return 1;
-                return val;
-            });
-        }
-
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initScorecard(1);
@@ -3993,20 +4134,7 @@
             setTimeout(() => {
                 document.getElementById('die-1').focus();
             }, 100);
-
-            // Set fresh game EV (joker mode)
-            fetch('/api/game_ev', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scores: {}, yahtzee_status: 0 })
-            })
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('fresh-ev').textContent = data.ev_remaining;
-            });
-
-            // Initialize win probabilities
-            updateWinProbabilities();
+            // Fresh EV and win probabilities are fetched by startGame()
         });
 
         // Article functions

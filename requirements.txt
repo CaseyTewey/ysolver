@@ -1,5 +1,4 @@
-flask==3.0.0
-gunicorn==21.2.0
-numpy
-numba
-scipy
+flask>=3.0,<4
+gunicorn>=21,<24
+numpy>=2.0,<3
+numba>=0.61

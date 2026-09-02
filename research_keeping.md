@@ -11,18 +11,18 @@ Expected values are calculated using dynamic programming with the full game tree
 
 | Category | Key Finding | EV Cost of Mistake |
 |----------|-------------|-------------------|
-| Low Pairs (1s, 2s) | Abandon for open-ended straights (2-3-4-5 or 3-4-5) | Up to **4.36 EV** |
-| High Pairs (5s, 6s) | Keep 6s always; 5s lose to perfect straight draws | 0-1.90 EV |
-| Mid Pairs (3s, 4s) | Abandon for 2-3-4-5 straight draws | Up to **3.51 EV** |
+| Low Pairs (1s, 2s) | Abandon for open-ended straights (2-3-4-5 or 3-4-5) | Up to **4.32 EV** |
+| High Pairs (5s, 6s) | Keep 6s always; 5s lose to perfect straight draws | 0-1.86 EV |
+| Mid Pairs (3s, 4s) | Abandon for 2-3-4-5 straight draws | Up to **3.47 EV** |
 | Three of a Kind | ALWAYS keep all 3 - never break up trips | N/A (intuition correct) |
 | Four of a Kind | ALWAYS chase Yahtzee from quads | N/A (intuition correct) |
-| Two Pairs | Keep the HIGHER pair only, not both | Up to **3.17 EV** |
+| Two Pairs | Keep the HIGHER pair only, not both | Up to **3.16 EV** |
 
 ### Biggest Surprises
 
 1. **Two pairs is a trap!** Keeping both pairs for Full House costs 2-3 EV - always keep just the higher pair
-2. **Pair of 2s with 2-3-4-5** is the biggest mistake (4.36 EV loss) - the straight draw dominates
-3. **Even pair of 5s loses** to a perfect 2-3-4-5 straight draw (1.90 EV)
+2. **Pair of 2s with 2-3-4-5** is the biggest mistake (4.32 EV loss) - the straight draw dominates
+3. **Even pair of 5s loses** to a perfect 2-3-4-5 straight draw (1.86 EV)
 
 ---
 
@@ -38,15 +38,15 @@ Expected values are calculated using dynamic programming with the full game tree
 
 | Dice | Description | Optimal Keep | Opt EV | Pair Keep | Pair EV | EV Loss | Verdict |
 |------|-------------|--------------|--------|-----------|---------|---------|---------|
-| [1, 1, 3, 4, 5] | Pair of 1s with 3-4-5 | [3, 4, 5] | 250.52 | [1, 1] | 249.05 | 1.47 | MISTAKE |
-| [1, 1, 2, 3, 4] | Pair of 1s with 1-2-3-4 | [1, 2, 3, 4] | 251.03 | [1, 1] | 249.05 | 1.98 | MISTAKE |
-| [2, 2, 3, 4, 5] | Pair of 2s with 2-3-4-5 | [2, 3, 4, 5] | 254.81 | [2, 2] | 250.45 | 4.36 | MISTAKE |
-| [2, 2, 3, 4, 6] | Pair of 2s with 3-4 (weak) | [2, 2] | 250.45 | [2, 2] | 250.45 | - | Correct |
-| [1, 1, 2, 4, 5] | Pair of 1s with 2-4-5 (gutshot) | [5] | 249.83 | [1, 1] | 249.05 | 0.78 | MISTAKE |
-| [1, 2, 2, 4, 5] | Pair of 2s with 1-4-5 | [2, 2] | 250.45 | [2, 2] | 250.45 | - | Correct |
-| [1, 2, 3, 4, 4] | Pair of 4s with 1-2-3-4 | [4, 4] | 252.13 | [4, 4] | 252.13 | - | Correct |
-| [1, 1, 4, 5, 6] | Pair of 1s with 4-5-6 | [5] | 249.83 | [1, 1] | 249.05 | 0.78 | MISTAKE |
-| [2, 2, 4, 5, 6] | Pair of 2s with 4-5-6 | [2, 2] | 250.45 | [2, 2] | 250.45 | - | Correct |
+| [1, 1, 3, 4, 5] | Pair of 1s with 3-4-5 | [3, 4, 5] | 250.62 | [1, 1] | 249.17 | 1.45 | MISTAKE |
+| [1, 1, 2, 3, 4] | Pair of 1s with 1-2-3-4 | [1, 2, 3, 4] | 251.13 | [1, 1] | 249.17 | 1.97 | MISTAKE |
+| [2, 2, 3, 4, 5] | Pair of 2s with 2-3-4-5 | [2, 3, 4, 5] | 254.88 | [2, 2] | 250.56 | 4.32 | MISTAKE |
+| [2, 2, 3, 4, 6] | Pair of 2s with 3-4 (weak) | [2, 2] | 250.56 | [2, 2] | 250.56 | - | Correct |
+| [1, 1, 2, 4, 5] | Pair of 1s with 2-4-5 (gutshot) | [5] | 249.94 | [1, 1] | 249.17 | 0.77 | MISTAKE |
+| [1, 2, 2, 4, 5] | Pair of 2s with 1-4-5 | [2, 2] | 250.56 | [2, 2] | 250.56 | - | Correct |
+| [1, 2, 3, 4, 4] | Pair of 4s with 1-2-3-4 | [4, 4] | 252.24 | [4, 4] | 252.24 | - | Correct |
+| [1, 1, 4, 5, 6] | Pair of 1s with 4-5-6 | [5] | 249.94 | [1, 1] | 249.17 | 0.77 | MISTAKE |
+| [2, 2, 4, 5, 6] | Pair of 2s with 4-5-6 | [2, 2] | 250.56 | [2, 2] | 250.56 | - | Correct |
 
 ### Key Insights - Low Pairs
 
@@ -73,14 +73,14 @@ Expected values are calculated using dynamic programming with the full game tree
 
 | Dice | Description | Optimal Keep | Opt EV | Pair Keep | Pair EV | EV Loss | Verdict |
 |------|-------------|--------------|--------|-----------|---------|---------|---------|
-| [5, 5, 3, 4, 6] | Pair of 5s with 3-4-5-6 open-ended | [5, 5] | 252.91 | [5, 5] | 252.91 | - | Correct |
-| [6, 6, 3, 4, 5] | Pair of 6s with 3-4-5 | [6, 6] | 253.83 | [6, 6] | 253.83 | - | Correct |
-| [5, 5, 2, 3, 4] | Pair of 5s with 2-3-4-5 | [2, 3, 4, 5] | 254.81 | [5, 5] | 252.91 | 1.90 | MISTAKE |
-| [6, 6, 2, 3, 4] | Pair of 6s with 2-3-4 | [6, 6] | 253.83 | [6, 6] | 253.83 | - | Correct |
-| [5, 5, 1, 2, 3] | Pair of 5s with 1-2-3 | [5, 5] | 252.91 | [5, 5] | 252.91 | - | Correct |
-| [6, 6, 1, 2, 4] | Pair of 6s with gutshot | [6, 6] | 253.83 | [6, 6] | 253.83 | - | Correct |
-| [4, 4, 2, 3, 5] | Pair of 4s with 2-3-4-5 | [2, 3, 4, 5] | 254.81 | [4, 4] | 252.13 | 2.67 | MISTAKE |
-| [3, 3, 2, 4, 5] | Pair of 3s with 2-3-4-5 | [2, 3, 4, 5] | 254.81 | [3, 3] | 251.30 | 3.51 | MISTAKE |
+| [5, 5, 3, 4, 6] | Pair of 5s with 3-4-5-6 open-ended | [5, 5] | 253.02 | [5, 5] | 253.02 | - | Correct |
+| [6, 6, 3, 4, 5] | Pair of 6s with 3-4-5 | [6, 6] | 253.94 | [6, 6] | 253.94 | - | Correct |
+| [5, 5, 2, 3, 4] | Pair of 5s with 2-3-4-5 | [2, 3, 4, 5] | 254.88 | [5, 5] | 253.02 | 1.86 | MISTAKE |
+| [6, 6, 2, 3, 4] | Pair of 6s with 2-3-4 | [6, 6] | 253.94 | [6, 6] | 253.94 | - | Correct |
+| [5, 5, 1, 2, 3] | Pair of 5s with 1-2-3 | [5, 5] | 253.02 | [5, 5] | 253.02 | - | Correct |
+| [6, 6, 1, 2, 4] | Pair of 6s with gutshot | [6, 6] | 253.94 | [6, 6] | 253.94 | - | Correct |
+| [4, 4, 2, 3, 5] | Pair of 4s with 2-3-4-5 | [2, 3, 4, 5] | 254.88 | [4, 4] | 252.24 | 2.63 | MISTAKE |
+| [3, 3, 2, 4, 5] | Pair of 3s with 2-3-4-5 | [2, 3, 4, 5] | 254.88 | [3, 3] | 251.41 | 3.47 | MISTAKE |
 
 ### Key Insights - High Pairs
 
@@ -99,10 +99,10 @@ Expected values are calculated using dynamic programming with the full game tree
 ### The Critical Pattern
 
 The magic straight draw is **2-3-4-5** - it beats almost every pair:
-- Beats pair of 2s (4.36 EV difference!)
-- Beats pair of 3s (3.51 EV difference)
-- Beats pair of 4s (2.67 EV difference)
-- Beats pair of 5s (1.90 EV difference)
+- Beats pair of 2s (4.32 EV difference!)
+- Beats pair of 3s (3.47 EV difference)
+- Beats pair of 4s (2.63 EV difference)
+- Beats pair of 5s (1.86 EV difference)
 - Only loses to pair of 6s
 
 ---
@@ -119,24 +119,24 @@ The magic straight draw is **2-3-4-5** - it beats almost every pair:
 
 | Dice | Description | Optimal Keep | Opt EV | Trips Keep | Trips EV | EV Loss | Verdict |
 |------|-------------|--------------|--------|------------|----------|---------|---------|
-| [1, 1, 1, 2, 3] | Trip 1s with 1-2-3 | [1, 1, 1] | 254.89 | [1, 1, 1] | 254.89 | - | Correct |
-| [2, 2, 2, 3, 4] | Trip 2s with 2-3-4 | [2, 2, 2] | 257.60 | [2, 2, 2] | 257.60 | - | Correct |
-| [2, 2, 2, 4, 5] | Trip 2s with 4-5 | [2, 2, 2] | 257.60 | [2, 2, 2] | 257.60 | - | Correct |
-| [3, 3, 3, 4, 5] | Trip 3s with 3-4-5 | [3, 3, 3] | 259.55 | [3, 3, 3] | 259.55 | - | Correct |
-| [5, 5, 5, 2, 3] | Trip 5s with 2-3 | [5, 5, 5] | 263.07 | [5, 5, 5] | 263.07 | - | Correct |
-| [6, 6, 6, 1, 2] | Trip 6s with 1-2 | [6, 6, 6] | 265.02 | [6, 6, 6] | 265.02 | - | Correct |
-| [6, 6, 6, 4, 5] | Trip 6s with 4-5 | [6, 6, 6] | 265.02 | [6, 6, 6] | 265.02 | - | Correct |
-| [3, 3, 3, 2, 4] | Trip 3s with 2-3-4 | [3, 3, 3] | 259.55 | [3, 3, 3] | 259.55 | - | Correct |
-| [4, 4, 4, 3, 5] | Trip 4s with 3-4-5 | [4, 4, 4] | 261.35 | [4, 4, 4] | 261.35 | - | Correct |
-| [4, 4, 4, 2, 3] | Trip 4s with 2-3-4 | [4, 4, 4] | 261.35 | [4, 4, 4] | 261.35 | - | Correct |
-| [3, 3, 3, 4, 5] | Trip 3s - compare keep [3,3] vs [3,3,3] | [3, 3, 3] | 259.55 | [3, 3, 3] | 259.55 | - | Correct |
+| [1, 1, 1, 2, 3] | Trip 1s with 1-2-3 | [1, 1, 1] | 254.99 | [1, 1, 1] | 254.99 | - | Correct |
+| [2, 2, 2, 3, 4] | Trip 2s with 2-3-4 | [2, 2, 2] | 257.70 | [2, 2, 2] | 257.70 | - | Correct |
+| [2, 2, 2, 4, 5] | Trip 2s with 4-5 | [2, 2, 2] | 257.70 | [2, 2, 2] | 257.70 | - | Correct |
+| [3, 3, 3, 4, 5] | Trip 3s with 3-4-5 | [3, 3, 3] | 259.65 | [3, 3, 3] | 259.65 | - | Correct |
+| [5, 5, 5, 2, 3] | Trip 5s with 2-3 | [5, 5, 5] | 263.17 | [5, 5, 5] | 263.17 | - | Correct |
+| [6, 6, 6, 1, 2] | Trip 6s with 1-2 | [6, 6, 6] | 265.11 | [6, 6, 6] | 265.11 | - | Correct |
+| [6, 6, 6, 4, 5] | Trip 6s with 4-5 | [6, 6, 6] | 265.11 | [6, 6, 6] | 265.11 | - | Correct |
+| [3, 3, 3, 2, 4] | Trip 3s with 2-3-4 | [3, 3, 3] | 259.65 | [3, 3, 3] | 259.65 | - | Correct |
+| [4, 4, 4, 3, 5] | Trip 4s with 3-4-5 | [4, 4, 4] | 261.45 | [4, 4, 4] | 261.45 | - | Correct |
+| [4, 4, 4, 2, 3] | Trip 4s with 2-3-4 | [4, 4, 4] | 261.45 | [4, 4, 4] | 261.45 | - | Correct |
+| [3, 3, 3, 4, 5] | Trip 3s - compare keep [3,3] vs [3,3,3] | [3, 3, 3] | 259.65 | [3, 3, 3] | 259.65 | - | Correct |
 
 ### Key Insights - Three of a Kind
 
 1. **Trips are gold**: The probability of improving from 3-of-kind is high:
    - P(Full House) from trips = decent (pair the other 2)
    - P(4-of-kind) from trips = reroll 2 dice, need 1+ match
-   - P(Yahtzee) from trips = reroll 2 dice twice, ~4%
+   - P(Yahtzee) from trips = reroll 2 dice twice, ~9%
 
 2. **Never break trips for straights**: Even with 3-4-5 when you have trip 3s,
    keeping all 3 is correct. The straight draw isn't worth giving up trips.
@@ -158,18 +158,18 @@ The magic straight draw is **2-3-4-5** - it beats almost every pair:
 
 | Dice | Description | Optimal Keep | Opt EV | Quads Keep | Quads EV | Keep All | Verdict |
 |------|-------------|--------------|--------|------------|----------|----------|---------|
-| [1, 1, 1, 1, 2] | Quads 1s + 2 | [1, 1, 1, 1] | 270.21 | [1, 1, 1, 1] | 270.21 | 260.09 | Correct |
-| [1, 1, 1, 1, 6] | Quads 1s + 6 | [1, 1, 1, 1] | 270.21 | [1, 1, 1, 1] | 270.21 | 260.09 | Correct |
-| [2, 2, 2, 2, 1] | Quads 2s + 1 | [2, 2, 2, 2] | 273.83 | [2, 2, 2, 2] | 273.83 | 264.43 | Correct |
-| [2, 2, 2, 2, 6] | Quads 2s + 6 | [2, 2, 2, 2] | 273.83 | [2, 2, 2, 2] | 273.83 | 264.43 | Correct |
-| [3, 3, 3, 3, 1] | Quads 3s + 1 | [3, 3, 3, 3] | 276.70 | [3, 3, 3, 3] | 276.70 | 267.88 | Correct |
-| [3, 3, 3, 3, 5] | Quads 3s + 5 | [3, 3, 3, 3] | 276.70 | [3, 3, 3, 3] | 276.70 | 267.88 | Correct |
-| [4, 4, 4, 4, 1] | Quads 4s + 1 | [4, 4, 4, 4] | 279.24 | [4, 4, 4, 4] | 279.24 | 270.92 | Correct |
-| [4, 4, 4, 4, 6] | Quads 4s + 6 | [4, 4, 4, 4] | 279.24 | [4, 4, 4, 4] | 279.24 | 270.92 | Correct |
-| [5, 5, 5, 5, 1] | Quads 5s + 1 | [5, 5, 5, 5] | 281.63 | [5, 5, 5, 5] | 281.63 | 273.79 | Correct |
-| [5, 5, 5, 5, 6] | Quads 5s + 6 | [5, 5, 5, 5] | 281.63 | [5, 5, 5, 5] | 281.63 | 273.79 | Correct |
-| [6, 6, 6, 6, 1] | Quads 6s + 1 | [6, 6, 6, 6] | 284.24 | [6, 6, 6, 6] | 284.24 | 276.92 | Correct |
-| [6, 6, 6, 6, 5] | Quads 6s + 5 | [6, 6, 6, 6] | 284.24 | [6, 6, 6, 6] | 284.24 | 276.92 | Correct |
+| [1, 1, 1, 1, 2] | Quads 1s + 2 | [1, 1, 1, 1] | 270.30 | [1, 1, 1, 1] | 270.30 | 260.19 | Correct |
+| [1, 1, 1, 1, 6] | Quads 1s + 6 | [1, 1, 1, 1] | 270.30 | [1, 1, 1, 1] | 270.30 | 260.19 | Correct |
+| [2, 2, 2, 2, 1] | Quads 2s + 1 | [2, 2, 2, 2] | 273.91 | [2, 2, 2, 2] | 273.91 | 264.53 | Correct |
+| [2, 2, 2, 2, 6] | Quads 2s + 6 | [2, 2, 2, 2] | 273.91 | [2, 2, 2, 2] | 273.91 | 264.53 | Correct |
+| [3, 3, 3, 3, 1] | Quads 3s + 1 | [3, 3, 3, 3] | 276.78 | [3, 3, 3, 3] | 276.78 | 267.97 | Correct |
+| [3, 3, 3, 3, 5] | Quads 3s + 5 | [3, 3, 3, 3] | 276.78 | [3, 3, 3, 3] | 276.78 | 267.97 | Correct |
+| [4, 4, 4, 4, 1] | Quads 4s + 1 | [4, 4, 4, 4] | 279.31 | [4, 4, 4, 4] | 279.31 | 271.01 | Correct |
+| [4, 4, 4, 4, 6] | Quads 4s + 6 | [4, 4, 4, 4] | 279.31 | [4, 4, 4, 4] | 279.31 | 271.01 | Correct |
+| [5, 5, 5, 5, 1] | Quads 5s + 1 | [5, 5, 5, 5] | 281.70 | [5, 5, 5, 5] | 281.70 | 273.87 | Correct |
+| [5, 5, 5, 5, 6] | Quads 5s + 6 | [5, 5, 5, 5] | 281.70 | [5, 5, 5, 5] | 281.70 | 273.87 | Correct |
+| [6, 6, 6, 6, 1] | Quads 6s + 1 | [6, 6, 6, 6] | 284.30 | [6, 6, 6, 6] | 284.30 | 277.00 | Correct |
+| [6, 6, 6, 6, 5] | Quads 6s + 5 | [6, 6, 6, 6] | 284.30 | [6, 6, 6, 6] | 284.30 | 277.00 | Correct |
 
 ### Key Insights - Four of a Kind
 
@@ -198,9 +198,9 @@ The magic straight draw is **2-3-4-5** - it beats almost every pair:
 
 | Dice | Optimal Keep | Opt EV | Intuitive (Both Pairs) | Int EV | EV Loss |
 |------|--------------|--------|------------------------|--------|---------|
-| [1, 1, 2, 2, 3] | [2, 2] | 250.45 | [1, 1, 2, 2] | 248.68 | **1.77** |
-| [3, 3, 5, 5, 6] | [5, 5] | 252.91 | [3, 3, 5, 5] | 249.74 | **3.17** |
-| [5, 5, 6, 6, 1] | [6, 6] | 253.83 | [5, 5, 6, 6] | 250.86 | **2.97** |
+| [1, 1, 2, 2, 3] | [2, 2] | 250.56 | [1, 1, 2, 2] | 248.79 | **1.77** |
+| [3, 3, 5, 5, 6] | [5, 5] | 253.02 | [3, 3, 5, 5] | 249.85 | **3.16** |
+| [5, 5, 6, 6, 1] | [6, 6] | 253.94 | [5, 5, 6, 6] | 250.97 | **2.97** |
 
 **Why this is wrong:**
 - Full House is only 25 points
@@ -212,19 +212,19 @@ The magic straight draw is **2-3-4-5** - it beats almost every pair:
 
 | Dice | Optimal Keep | EV | Intuitive | Int EV | Notes |
 |------|--------------|-----|-----------|--------|-------|
-| [1, 2, 3, 4, 6] | [1, 2, 3, 4] | 251.03 | [1, 2, 3, 4] | 251.03 | Go for large straight |
-| [2, 3, 4, 5, 1] | **[1, 2, 3, 4, 5]** | **261.52** | [2, 3, 4, 5] | 254.81 | **Keep all 5! Already have large straight!** |
-| [3, 4, 5, 6, 1] | [3, 4, 5, 6] | 251.03 | [3, 4, 5, 6] | 251.03 | Reroll the 1 |
+| [1, 2, 3, 4, 6] | [1, 2, 3, 4] | 251.13 | [1, 2, 3, 4] | 251.13 | Go for large straight |
+| [2, 3, 4, 5, 1] | **[1, 2, 3, 4, 5]** | **261.53** | [2, 3, 4, 5] | 254.88 | **Keep all 5! Already have large straight!** |
+| [3, 4, 5, 6, 1] | [3, 4, 5, 6] | 251.13 | [3, 4, 5, 6] | 251.13 | Reroll the 1 |
 
 **Key insight:** [2, 3, 4, 5, 1] is already a LARGE STRAIGHT worth 40 points!
-Keeping just [2, 3, 4, 5] costs you **6.71 EV** - don't throw away a made hand!
+Keeping just [2, 3, 4, 5] costs you **6.66 EV** - don't throw away a made hand!
 
 ### Near Large Straights
 
 | Dice | Optimal Keep | EV | Notes |
 |------|--------------|----|----|
-| [1, 3, 4, 5, 6] | [3, 4, 5, 6] | 251.03 | Almost large straight (missing 2) |
-| [2, 3, 4, 5, 5] | [2, 3, 4, 5] | 254.81 | Almost large straight with pair 5s |
+| [1, 3, 4, 5, 6] | [3, 4, 5, 6] | 251.13 | Almost large straight (missing 2) |
+| [2, 3, 4, 5, 5] | [2, 3, 4, 5] | 254.88 | Almost large straight with pair 5s |
 
 
 ---
@@ -238,8 +238,8 @@ Keeping just [2, 3, 4, 5] costs you **6.71 EV** - don't throw away a made hand!
 
 ### EV Solver Details
 
-The solver uses precomputed EV tables for all 8192 x 64 x 3 game states
-(filled categories x upper subtotal x yahtzee status). For each keep decision,
+The solver uses precomputed EV tables for all 8192 x 64 x 2 game states
+(filled categories x upper subtotal x Yahtzee-bonus flag). For each keep decision,
 it computes expected value by:
 
 1. Enumerating all possible reroll outcomes
@@ -283,35 +283,35 @@ This is why high pairs are more valuable than low pairs!
 
 | Keep Type | Example | EV | Notes |
 |-----------|---------|-----|-------|
-| Four of a kind (6s) | [6,6,6,6] | 284.24 | Best possible keep |
-| Four of a kind (5s) | [5,5,5,5] | 281.63 | |
-| Four of a kind (4s) | [4,4,4,4] | 279.24 | |
-| Four of a kind (3s) | [3,3,3,3] | 276.70 | |
-| Four of a kind (2s) | [2,2,2,2] | 273.83 | |
-| Four of a kind (1s) | [1,1,1,1] | 270.21 | Still great! |
-| Three 6s | [6,6,6] | 265.02 | |
-| Three 5s | [5,5,5] | 263.07 | |
-| Three 4s | [4,4,4] | 261.35 | |
-| Large straight | [1,2,3,4,5] | 261.52 | Keep all 5! |
-| Three 3s | [3,3,3] | 259.55 | |
-| Three 2s | [2,2,2] | 257.60 | |
-| Three 1s | [1,1,1] | 254.89 | |
-| Open-ended straight | [2,3,4,5] | 254.81 | Very strong draw |
-| Pair of 6s | [6,6] | 253.83 | |
-| Pair of 5s | [5,5] | 252.91 | |
-| Pair of 4s | [4,4] | 252.13 | |
-| Small straight (low) | [1,2,3,4] | 251.03 | |
-| Small straight (high) | [3,4,5,6] | 251.03 | |
-| Pair of 3s | [3,3] | 251.30 | |
-| Inside straight | [3,4,5] | 250.52 | |
-| Pair of 2s | [2,2] | 250.45 | |
-| Two pairs | [5,5,6,6] | 250.86 | Bad! Keep one pair |
-| Empty (reroll all) | [] | 249.36 | Baseline |
-| Pair of 1s | [1,1] | 249.05 | Below baseline! |
+| Four of a kind (6s) | [6,6,6,6] | 284.30 | Best possible keep |
+| Four of a kind (5s) | [5,5,5,5] | 281.70 | |
+| Four of a kind (4s) | [4,4,4,4] | 279.31 | |
+| Four of a kind (3s) | [3,3,3,3] | 276.78 | |
+| Four of a kind (2s) | [2,2,2,2] | 273.91 | |
+| Four of a kind (1s) | [1,1,1,1] | 270.30 | Still great! |
+| Three 6s | [6,6,6] | 265.11 | |
+| Three 5s | [5,5,5] | 263.17 | |
+| Three 4s | [4,4,4] | 261.45 | |
+| Large straight | [1,2,3,4,5] | 261.53 | Keep all 5! |
+| Three 3s | [3,3,3] | 259.65 | |
+| Three 2s | [2,2,2] | 257.70 | |
+| Three 1s | [1,1,1] | 254.99 | |
+| Open-ended straight | [2,3,4,5] | 254.88 | Very strong draw |
+| Pair of 6s | [6,6] | 253.94 | |
+| Pair of 5s | [5,5] | 253.02 | |
+| Pair of 4s | [4,4] | 252.24 | |
+| Small straight (low) | [1,2,3,4] | 251.13 | |
+| Small straight (high) | [3,4,5,6] | 251.13 | |
+| Pair of 3s | [3,3] | 251.41 | |
+| Inside straight | [3,4,5] | 250.62 | |
+| Pair of 2s | [2,2] | 250.56 | |
+| Two pairs | [5,5,6,6] | 250.97 | Bad! Keep one pair |
+| Empty (reroll all) | [] | 249.47 | Baseline |
+| Pair of 1s | [1,1] | 249.17 | Below baseline! |
 
 ### Key Observations
 
-1. **Any pair of 1s is worse than rerolling all 5 dice!** (249.05 vs 249.36)
+1. **Any pair of 1s is worse than rerolling all 5 dice!** (249.17 vs 249.47)
 2. **Two pairs underperform** compared to the higher single pair
 3. **Open-ended straight [2,3,4,5] beats all pairs except 6s**
 4. **Trips always beat pairs** by a wide margin (5-10+ EV)

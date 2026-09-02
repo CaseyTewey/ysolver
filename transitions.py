@@ -199,7 +199,7 @@ if __name__ == "__main__":
     print("Precomputing transitions...")
     precompute_all()
     stats = get_stats()
-    print(f"Statistics:")
+    print("Statistics:")
     for k, v in stats.items():
         print(f"  {k}: {v}")
 
