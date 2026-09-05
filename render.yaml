@@ -2,8 +2,21 @@ services:
   - type: web
     name: ysolver
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: python -m pip install -r requirements-render.txt && python deploy.py build
+    startCommand: gunicorn --config gunicorn.conf.py app:app
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.14.6"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: NUMBA_NUM_THREADS
+        value: "1"
+      - key: NUMBA_CPU_NAME
+        value: generic
+      # This separate file starts empty. Set this to /var/data/game_results.json
+      # when a persistent disk is attached at /var/data; /tmp is ephemeral.
+      - key: GAME_RESULTS_FILE
+        value: /tmp/ysolver/game_results.json

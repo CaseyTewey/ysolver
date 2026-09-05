@@ -37,3 +37,4 @@ Math-To-Manim/
 .venv/
 work/
 *.json.lock
+.numba-cache/
