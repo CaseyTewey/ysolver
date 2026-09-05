@@ -24,6 +24,50 @@ UPPER_THRESHOLD = 63
 CACHE_FILE = Path(__file__).parent / "ev_cache.pkl"
 
 
+def build_reroll_lattice():
+    """Index all 462 partial hands, ordered from zero to five kept dice.
+
+    Each child adds one equally likely die; each parent removes one kept die.
+    This permits the exact same reroll expectation/maximization as enumerating
+    every keep/outcome pair, without repeating overlapping subproblems.
+    """
+    from dice import compositions
+    hands = [hand for n in range(6) for hand in compositions(n)]
+    lookup = {hand: i for i, hand in enumerate(hands)}
+    children = np.full((len(hands), 6), -1, dtype=np.int32)
+    parents = np.full((len(hands), 6), -1, dtype=np.int32)
+    for i, hand in enumerate(hands):
+        for face in range(6):
+            if sum(hand) < 5:
+                child = list(hand)
+                child[face] += 1
+                children[i, face] = lookup[tuple(child)]
+            if hand[face]:
+                parent = list(hand)
+                parent[face] -= 1
+                parents[i, face] = lookup[tuple(parent)]
+    return children, parents, len(hands) - NUM_ROLLS
+
+
+@njit(cache=True)
+def compute_reroll_lattice(values, children, parents, full_start, out):
+    """Exact optimal value for one remaining reroll, for every full hand."""
+    expected = np.empty(children.shape[0], dtype=np.float64)
+    expected[full_start:] = values
+    for i in range(full_start - 1, -1, -1):
+        total = 0.0
+        for face in range(6):
+            total += expected[children[i, face]]
+        expected[i] = total / 6.0
+    # Max over the subset lattice: either keep this hand, or drop a die.
+    for i in range(1, len(expected)):
+        for face in range(6):
+            parent = parents[i, face]
+            if parent >= 0 and expected[parent] > expected[i]:
+                expected[i] = expected[parent]
+    out[:] = expected[full_start:]
+
+
 def build_transition_arrays():
     """
     Build numpy arrays for transitions that numba can use efficiently.
@@ -357,9 +401,9 @@ if __name__ == "__main__":
     print("=" * 60)
     ev = tables['ev_remaining'][0, 0]
     print(f"Expected score from fresh game: {ev:.2f}")
-    print(f"(Literature value: ~254-255)")
+    print("(Expected without Joker rules or extra Yahtzee bonuses: approximately 245.87)")
 
-    if 250 < ev < 260:
+    if 240 < ev < 250:
         print("Status: LOOKS CORRECT!")
     else:
-        print(f"Status: WARNING - value {ev:.2f} outside expected range 250-260")
+        print(f"Status: WARNING - value {ev:.2f} outside expected range 240-250")

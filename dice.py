@@ -10,6 +10,7 @@ This module handles:
 from typing import Tuple, List, Dict
 from functools import lru_cache
 from math import factorial
+from numbers import Integral
 
 # Type alias for dice counts: (count_of_1s, count_of_2s, ..., count_of_6s)
 Counts = Tuple[int, int, int, int, int, int]
@@ -102,6 +103,8 @@ def dice_list_to_counts(dice: List[int]) -> Counts:
     """
     counts = [0, 0, 0, 0, 0, 0]
     for d in dice:
+        if isinstance(d, bool) or not isinstance(d, Integral) or not 1 <= d <= 6:
+            raise ValueError("Dice values must be integers from 1 to 6")
         counts[d - 1] += 1
     return tuple(counts)
 

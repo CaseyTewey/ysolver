@@ -251,10 +251,10 @@ if __name__ == "__main__":
     print("VALIDATION")
     print("=" * 60)
     print(f"Expected score from fresh game: {tables['ev_remaining'][0, 0]:.2f}")
-    print(f"(Literature value: ~254-255)")
+    print("(Expected without Joker rules or extra Yahtzee bonuses: approximately 245.87)")
 
     ev = tables['ev_remaining'][0, 0]
-    if 250 < ev < 260:
+    if 240 < ev < 250:
         print("Status: LOOKS CORRECT!")
     else:
         print("Status: WARNING - outside expected range")

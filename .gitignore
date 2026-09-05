@@ -32,3 +32,8 @@ node_modules/
 # Generated media
 media/
 Math-To-Manim/
+
+# Local backend verification and environments
+.venv/
+work/
+*.json.lock

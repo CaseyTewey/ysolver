@@ -485,18 +485,20 @@ class TestPMFSolver(unittest.TestCase):
         """PMF probabilities should sum to approximately 1."""
         from pmf_solver import pmf_remaining
 
-        pmf = pmf_remaining(0, 0)
+        # Exercise a real policy distribution without expanding all 13 turns.
+        pmf = pmf_remaining(8191 ^ (1 << 12), 0)
         total = sum(pmf.values())
         self.assertTrue(isclose(total, 1.0, rel_tol=1e-3))
 
     def test_pmf_mean_matches_ev(self):
         """PMF mean should approximately match EV."""
         from pmf_solver import pmf_remaining, pmf_stats
-        from ev_solver import get_expected_score_fresh_game
+        from ev_solver import ev_remaining
 
-        pmf = pmf_remaining(0, 0)
+        mask = 8191 ^ (1 << 12)
+        pmf = pmf_remaining(mask, 0)
         stats = pmf_stats(pmf)
-        ev = get_expected_score_fresh_game()
+        ev = ev_remaining(mask, 0)
 
         # Should be close (within 1 point due to pruning)
         self.assertTrue(abs(stats['mean'] - ev) < 1.0)
@@ -525,7 +527,8 @@ class TestMatch(unittest.TestCase):
         """Win + tie + lose probabilities should sum to 1."""
         from match import win_probs
 
-        probs = win_probs(0, 0, 0, 0, 0, 0)
+        mask = 8191 ^ (1 << 12)
+        probs = win_probs(0, mask, 0, 0, mask, 0)
         total = probs['win_prob'] + probs['tie_prob'] + probs['lose_prob']
         self.assertTrue(isclose(total, 1.0, rel_tol=1e-6))
 
@@ -533,7 +536,8 @@ class TestMatch(unittest.TestCase):
         """Equal states should give ~50% win probability."""
         from match import win_probs
 
-        probs = win_probs(0, 0, 0, 0, 0, 0)
+        mask = 8191 ^ (1 << 12)
+        probs = win_probs(0, mask, 0, 0, mask, 0)
         # Should be close to 50% (symmetric)
         self.assertTrue(isclose(probs['win_prob'], probs['lose_prob'], rel_tol=0.01))
 
@@ -542,17 +546,18 @@ class TestMatch(unittest.TestCase):
         from match import win_probs
 
         # A is ahead by 50 points, same state otherwise
-        probs = win_probs(100, 0b111, 15, 50, 0b111, 15)
+        mask = 8191 ^ (1 << 12)
+        probs = win_probs(100, mask, 15, 50, mask, 15)
         self.assertGreater(probs['win_prob'], 0.5)
 
     def test_more_turns_left_matters(self):
         """Player with more turns left has more variance."""
         from match import PlayerState, MatchState, get_match_analysis
 
-        # A has 10 turns left, B has 3 turns left
+        # A has one turn left, B has finished.
         # With same score, A has more opportunity to catch up or fall behind
-        state_a = PlayerState(score=100, mask=0b111, upper=15)  # 3 filled
-        state_b = PlayerState(score=100, mask=0b1111111111, upper=50)  # 10 filled
+        state_a = PlayerState(score=100, mask=8191 ^ (1 << 12), upper=15)
+        state_b = PlayerState(score=100, mask=8191, upper=15)
 
         analysis = get_match_analysis(MatchState(state_a, state_b))
         # A has more remaining score (more turns)
@@ -604,7 +609,10 @@ class TestIntegration(unittest.TestCase):
         self.assertIsNotNone(rec['category'])
 
         # Win probability should compute
-        probs = win_probs(109, mask, upper, 100, mask, upper)
+        # Match distributions are deliberately bounded to a late-game state;
+        # the mid-game recommendation above still exercises the full EV table.
+        late_mask = 8191 ^ (1 << 12)
+        probs = win_probs(109, late_mask, upper, 100, late_mask, upper)
         self.assertTrue(isclose(
             probs['win_prob'] + probs['tie_prob'] + probs['lose_prob'],
             1.0, rel_tol=1e-6

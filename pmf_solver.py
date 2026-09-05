@@ -7,6 +7,9 @@ under optimal play, enabling win probability calculations.
 
 from typing import Dict, Tuple, List, Optional
 from functools import lru_cache
+from collections import OrderedDict
+from threading import RLock
+from math import isfinite
 import numpy as np
 from scipy.signal import fftconvolve
 from dice import Counts, enumerate_rolls, roll_id, id_to_roll
@@ -21,7 +24,7 @@ from ev_solver import best_keep_roll1, best_keep_roll2, best_category, clamp_upp
 PMF = Dict[int, float]
 
 
-def prune_pmf(pmf: PMF, eps: float = 1e-7, topk: int = 2000) -> PMF:
+def prune_pmf(pmf: PMF, eps: float = 0.0, topk: int = 2000) -> PMF:
     """
     Prune a PMF to reduce size while preserving most mass.
 
@@ -33,20 +36,25 @@ def prune_pmf(pmf: PMF, eps: float = 1e-7, topk: int = 2000) -> PMF:
     Returns:
         Pruned PMF (renormalized)
     """
-    if len(pmf) <= topk:
-        # Just remove tiny probabilities
-        pruned = {k: v for k, v in pmf.items() if v >= eps}
-    else:
-        # Keep top-k by probability mass
-        sorted_items = sorted(pmf.items(), key=lambda x: -x[1])[:topk]
-        pruned = {k: v for k, v in sorted_items if v >= eps}
-
-    # Renormalize
+    if not isfinite(eps) or eps < 0:
+        raise ValueError("eps must be a finite nonnegative number")
+    if isinstance(topk, bool) or not isinstance(topk, int) or topk < 1:
+        raise ValueError("topk must be a positive integer")
+    if not pmf:
+        return {}
+    if any(not isfinite(prob) or prob < 0 for prob in pmf.values()):
+        raise ValueError("PMF probabilities must be finite and nonnegative")
+    positive = {score: prob for score, prob in pmf.items() if prob > 0}
+    if not positive:
+        raise ValueError("PMF must contain positive probability mass")
+    pruned = dict(sorted(positive.items(), key=lambda item: -item[1])[:topk])
+    pruned = {score: prob for score, prob in pruned.items() if prob >= eps}
+    # An aggressive caller-supplied cutoff must not produce an empty distribution.
+    if not pruned:
+        score = max(positive, key=positive.get)
+        pruned = {score: positive[score]}
     total = sum(pruned.values())
-    if total > 0 and abs(total - 1.0) > 1e-9:
-        pruned = {k: v / total for k, v in pruned.items()}
-
-    return pruned
+    return {score: prob / total for score, prob in pruned.items()}
 
 
 def shift_pmf(pmf: PMF, delta: int) -> PMF:
@@ -140,67 +148,74 @@ def mix_pmfs(pmfs_with_weights: List[Tuple[PMF, float]]) -> PMF:
 # PMF Computation Under Optimal Policy
 # =============================================================================
 
-# Cache for PMFs
-_PMF_CACHE: Dict[Tuple[int, int], PMF] = {}
+# Include approximation options in the cache key. Serialize recursive solves so
+# concurrent callers share work and cannot race cache clearing or LRU updates.
+_PMF_CACHE = OrderedDict()
+_PMF_CACHE_MAX_SIZE = 10000
+_PMF_LOCK = RLock()
 
 
 def clear_pmf_cache():
-    """Clear the PMF cache."""
-    global _PMF_CACHE
-    _PMF_CACHE = {}
+    """Clear the PMF cache after any current solve completes."""
+    with _PMF_LOCK:
+        _PMF_CACHE.clear()
 
 
-def pmf_remaining(mask: int, upper: int, eps: float = 1e-7, topk: int = 2000) -> PMF:
+def _validate_pmf_state(mask: int, upper: int, eps: float, topk: int) -> int:
+    if isinstance(mask, bool) or not isinstance(mask, int) or not 0 <= mask <= FULL_MASK:
+        raise ValueError("mask must be a 13-bit nonnegative integer")
+    if isinstance(upper, bool) or not isinstance(upper, int) or upper < 0:
+        raise ValueError("upper must be a nonnegative integer")
+    prune_pmf({}, eps, topk)
+    return clamp_upper(upper)
+
+
+def pmf_remaining(mask: int, upper: int, eps: float = 0.0, topk: int = 2000) -> PMF:
+    """Return remaining category points plus the upper bonus awarded at game end.
+
+    Locked scores used with this distribution must exclude the upper bonus.
+    eps=0 preserves every positive outcome; nonzero eps or a restrictive topk
+    explicitly requests an approximate distribution. Full-game recursive solves
+    are expensive; interactive callers should restrict the remaining categories.
     """
-    Compute distribution of remaining score under optimal policy.
+    upper = _validate_pmf_state(mask, upper, eps, topk)
+    with _PMF_LOCK:
+        return _pmf_remaining(mask, upper, eps, topk).copy()
 
-    Args:
-        mask: Filled categories bitmask
-        upper: Upper section subtotal (clamped)
-        eps: Probability pruning threshold
-        topk: Max PMF entries
 
-    Returns:
-        PMF mapping additional_score -> probability
-    """
-    cache_key = (mask, upper)
+def _pmf_remaining(mask: int, upper: int, eps: float, topk: int) -> PMF:
+    cache_key = (mask, upper, eps, topk)
     if cache_key in _PMF_CACHE:
+        _PMF_CACHE.move_to_end(cache_key)
         return _PMF_CACHE[cache_key]
-
-    # Base case: all categories filled
     if mask == FULL_MASK:
-        bonus = UPPER_BONUS if upper >= UPPER_BONUS_THRESHOLD else 0
-        result = {bonus: 1.0}
-        _PMF_CACHE[cache_key] = result
-        return result
-
-    # Compute turn PMF and convolve with future
-    turn_result = compute_turn_pmf(mask, upper, eps, topk)
-
-    # turn_result maps (points, next_mask, next_upper) -> probability
-    # We need to convolve each outcome with its future PMF
-
-    final_pmf = {}
-
-    for (pts, next_mask, next_upper), prob in turn_result.items():
-        # Get future PMF from next state
-        future_pmf = pmf_remaining(next_mask, next_upper, eps, topk)
-
-        # Shift future PMF by points scored this turn
-        shifted = shift_pmf(future_pmf, pts)
-
-        # Add to mixture
-        for score, p in shifted.items():
-            final_pmf[score] = final_pmf.get(score, 0.0) + prob * p
-
-    # Prune result
-    final_pmf = prune_pmf(final_pmf, eps, topk)
-
-    _PMF_CACHE[cache_key] = final_pmf
-    return final_pmf
+        result = {UPPER_BONUS if upper >= UPPER_BONUS_THRESHOLD else 0: 1.0}
+    else:
+        final_pmf = {}
+        for (pts, next_mask, next_upper), prob in compute_turn_pmf(mask, upper).items():
+            for score, future_prob in _pmf_remaining(next_mask, next_upper, eps, topk).items():
+                total_score = score + pts
+                final_pmf[total_score] = final_pmf.get(total_score, 0.0) + prob * future_prob
+        result = prune_pmf(final_pmf, eps, topk)
+    _PMF_CACHE[cache_key] = result
+    if len(_PMF_CACHE) > _PMF_CACHE_MAX_SIZE:
+        _PMF_CACHE.popitem(last=False)
+    return result
 
 
-def compute_turn_pmf(mask: int, upper: int, eps: float = 1e-7,
+def _final_roll_distribution(keeps_after_roll1, keeps_after_roll2) -> Dict[int, float]:
+    """Propagate mass across roll states; never prune individual roll paths."""
+    current = dict(get_initial_roll_dist())
+    for keeps in (keeps_after_roll1, keeps_after_roll2):
+        following = {}
+        for roll_idx, probability in current.items():
+            for next_roll, transition_prob in get_transition_dist(roll_idx, keeps[roll_idx]):
+                following[next_roll] = following.get(next_roll, 0.0) + probability * transition_prob
+        current = following
+    return current
+
+
+def compute_turn_pmf(mask: int, upper: int, eps: float = 0.0,
                      topk: int = 2000) -> Dict[Tuple[int, int, int], float]:
     """
     Compute distribution of turn outcomes under optimal policy.
@@ -208,34 +223,19 @@ def compute_turn_pmf(mask: int, upper: int, eps: float = 1e-7,
     Returns:
         Dict mapping (points, next_mask, next_upper) -> probability
     """
+    upper = _validate_pmf_state(mask, upper, eps, topk)
+    if mask == FULL_MASK:
+        return {(0, mask, upper): 1.0}
     score_table = get_score_table()
+    keep1 = [best_keep_roll1(rid, mask, upper) for rid in range(len(score_table))]
+    keep2 = [best_keep_roll2(rid, mask, upper) for rid in range(len(score_table))]
     result = {}
-
-    # Enumerate all paths through the turn
-    for roll1_idx, p1 in get_initial_roll_dist():
-        # Optimal keep after roll 1
-        keep1 = best_keep_roll1(roll1_idx, mask, upper)
-
-        for roll2_idx, p2 in get_transition_dist(roll1_idx, keep1):
-            # Optimal keep after roll 2
-            keep2 = best_keep_roll2(roll2_idx, mask, upper)
-
-            for roll3_idx, p3 in get_transition_dist(roll2_idx, keep2):
-                # Optimal category choice
-                cat, _ = best_category(roll3_idx, mask, upper)
-
-                # Compute outcome
-                pts = score_table[roll3_idx][cat]
-                next_mask = mask | (1 << cat)
-                next_upper = upper
-                if is_upper_category(cat):
-                    next_upper = clamp_upper(upper + pts)
-
-                # Accumulate probability
-                key = (pts, next_mask, next_upper)
-                path_prob = p1 * p2 * p3
-                result[key] = result.get(key, 0.0) + path_prob
-
+    for roll_idx, probability in _final_roll_distribution(keep1, keep2).items():
+        cat, _ = best_category(roll_idx, mask, upper)
+        pts = int(score_table[roll_idx][cat])
+        next_upper = clamp_upper(upper + pts) if is_upper_category(cat) else upper
+        key = (pts, mask | (1 << cat), next_upper)
+        result[key] = result.get(key, 0.0) + probability
     return result
 
 
@@ -300,43 +300,20 @@ def compute_turn_score_dist(mask: int, upper: int) -> PMF:
     Compute distribution of points scored THIS TURN only.
     (Not including future turns)
     """
-    score_table = get_score_table()
     result = {}
-
-    for roll1_idx, p1 in get_initial_roll_dist():
-        keep1 = best_keep_roll1(roll1_idx, mask, upper)
-
-        for roll2_idx, p2 in get_transition_dist(roll1_idx, keep1):
-            keep2 = best_keep_roll2(roll2_idx, mask, upper)
-
-            for roll3_idx, p3 in get_transition_dist(roll2_idx, keep2):
-                cat, _ = best_category(roll3_idx, mask, upper)
-                pts = score_table[roll3_idx][cat]
-
-                path_prob = p1 * p2 * p3
-                result[pts] = result.get(pts, 0.0) + path_prob
-
+    for (points, _, _), probability in compute_turn_pmf(mask, upper).items():
+        result[points] = result.get(points, 0.0) + probability
     return result
 
 
 def compute_category_hit_probs(mask: int, upper: int) -> Dict[int, float]:
-    """
-    Compute probability of scoring in each category this turn.
-    """
+    """Compute probability of choosing each open category on the next turn."""
     result = {cat: 0.0 for cat in get_legal_categories(mask)}
-
-    for roll1_idx, p1 in get_initial_roll_dist():
-        keep1 = best_keep_roll1(roll1_idx, mask, upper)
-
-        for roll2_idx, p2 in get_transition_dist(roll1_idx, keep1):
-            keep2 = best_keep_roll2(roll2_idx, mask, upper)
-
-            for roll3_idx, p3 in get_transition_dist(roll2_idx, keep2):
-                cat, _ = best_category(roll3_idx, mask, upper)
-
-                path_prob = p1 * p2 * p3
-                result[cat] = result.get(cat, 0.0) + path_prob
-
+    if not result:
+        return result
+    for (_, next_mask, _), probability in compute_turn_pmf(mask, upper).items():
+        cat = (next_mask ^ mask).bit_length() - 1
+        result[cat] += probability
     return result
 
 

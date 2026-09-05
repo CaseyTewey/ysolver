@@ -114,7 +114,8 @@ def score(cat: int, counts: Counts, joker_rules: bool = False,
         counts: Tuple of counts for faces 1-6
         joker_rules: Whether to apply Yahtzee joker rules
         yahtzee_filled: Whether Yahtzee box is already filled
-        has_yahtzee_bonus: Whether player has scored a Yahtzee (for joker)
+        has_yahtzee_bonus: Whether player has scored a Yahtzee (bonus eligibility;
+            Joker category scores also apply after a scratched Yahtzee)
 
     Returns:
         Score for that category (0 if invalid)
@@ -122,7 +123,7 @@ def score(cat: int, counts: Counts, joker_rules: bool = False,
     # Handle Yahtzee joker rules
     is_yahtzee = _is_yahtzee(counts)
 
-    if joker_rules and is_yahtzee and yahtzee_filled and has_yahtzee_bonus:
+    if joker_rules and is_yahtzee and yahtzee_filled:
         # Yahtzee joker: can score in any category with special rules
         # Upper section: must use corresponding face
         if cat in UPPER_CATEGORIES:
@@ -164,7 +165,7 @@ def score(cat: int, counts: Counts, joker_rules: bool = False,
         return 0
 
     elif cat == Category.FULL_HOUSE:
-        if _is_full_house(counts) or (is_yahtzee and joker_rules):
+        if _is_full_house(counts):
             return 25
         return 0
 
@@ -221,6 +222,24 @@ def get_legal_categories(mask: int) -> List[int]:
         List of category indices that are still available
     """
     return [cat for cat in range(NUM_CATEGORIES) if not (mask & (1 << cat))]
+
+
+def get_legal_categories_joker(roll_idx: int, mask: int,
+                             yahtzee_status: int) -> List[int]:
+    """Apply Hasbro's forced Joker placement, including a scratched Yahtzee.
+
+    Once the Yahtzee box is filled, five equal dice must use their matching
+    upper box, then an open lower box, then another upper box for zero.
+    Only status 2 earns the separate 100-point bonus.
+    """
+    legal = get_legal_categories(mask)
+    if yahtzee_status == 0 or not is_yahtzee_roll(roll_idx):
+        return legal
+    forced = get_forced_category_joker(roll_idx, mask)
+    if forced is not None:
+        return [forced]
+    lower = [cat for cat in legal if cat >= 6]
+    return lower or legal
 
 
 def is_upper_category(cat: int) -> bool:

@@ -20,7 +20,7 @@ from scoring import CATEGORY_NAMES, NUM_CATEGORIES, get_legal_categories
 @dataclass
 class PlayerState:
     """State of a single player's scorecard."""
-    score: int          # Points already locked in
+    score: int          # Category points (upper bonus is deferred to the PMF)
     mask: int           # Filled categories bitmask
     upper: int          # Upper section subtotal (clamped to 63)
     name: str = "Player"
@@ -99,16 +99,16 @@ def compute_win_probs(state_a: PlayerState, state_b: PlayerState) -> Dict[str, f
         p_tie = final_pmf_b.get(score_a, 0.0)
 
         # P(A < B | A = score_a) = 1 - P(A >= B) = 1 - P(A > B) - P(A = B)
-        p_a_loses = 1.0 - p_a_wins - p_tie
+        p_a_loses = max(0.0, 1.0 - p_a_wins - p_tie)
 
         win_prob += prob_a * p_a_wins
         tie_prob += prob_a * p_tie
         lose_prob += prob_a * p_a_loses
 
     return {
-        "win_prob": win_prob,
-        "tie_prob": tie_prob,
-        "lose_prob": lose_prob,
+        "win_prob": min(1.0, max(0.0, win_prob)),
+        "tie_prob": min(1.0, max(0.0, tie_prob)),
+        "lose_prob": min(1.0, max(0.0, lose_prob)),
     }
 
 
@@ -124,20 +124,14 @@ def compute_win_probs_fast(state_a: PlayerState, state_b: PlayerState) -> Dict[s
     final_pmf_a = shift_pmf(pmf_a, state_a.score)
     final_pmf_b = shift_pmf(pmf_b, state_b.score)
 
-    # Sort scores
-    scores_a = sorted(final_pmf_a.keys())
     scores_b = sorted(final_pmf_b.keys())
 
     # Build cumulative sums for B
-    # b_cdf_below[i] = P(B < scores_b[i])
+    # Entry i contains exactly the mass of B's first i scores. The final
+    # entry is needed when A exceeds every possible B score.
     b_cdf_below = [0.0]
-    cumsum = 0.0
     for score in scores_b:
-        b_cdf_below.append(cumsum)
-        cumsum += final_pmf_b[score]
-
-    # Build mapping from score to index for B
-    b_score_to_idx = {s: i for i, s in enumerate(scores_b)}
+        b_cdf_below.append(b_cdf_below[-1] + final_pmf_b[score])
 
     win_prob = 0.0
     tie_prob = 0.0
@@ -156,16 +150,16 @@ def compute_win_probs_fast(state_a: PlayerState, state_b: PlayerState) -> Dict[s
         p_tie = final_pmf_b.get(score_a, 0.0)
 
         # P(B > score_a)
-        p_b_above = 1.0 - p_b_below - p_tie
+        p_b_above = max(0.0, 1.0 - p_b_below - p_tie)
 
         win_prob += prob_a * p_b_below
         tie_prob += prob_a * p_tie
         lose_prob += prob_a * p_b_above
 
     return {
-        "win_prob": win_prob,
-        "tie_prob": tie_prob,
-        "lose_prob": lose_prob,
+        "win_prob": min(1.0, max(0.0, win_prob)),
+        "tie_prob": min(1.0, max(0.0, tie_prob)),
+        "lose_prob": min(1.0, max(0.0, lose_prob)),
     }
 
 
@@ -288,7 +282,8 @@ def get_comeback_analysis(behind_state: PlayerState, ahead_state: PlayerState) -
 
     # What percentile of trailing player's remaining would tie?
     target_remaining = deficit + exp_ahead
-    prob_catch_up = prob_at_least(pmf_behind, target_remaining)
+    probabilities = compute_win_probs_fast(behind_state, ahead_state)
+    prob_catch_up = probabilities["win_prob"] + probabilities["tie_prob"]
 
     return {
         "current_deficit": deficit,
@@ -352,7 +347,7 @@ def win_probs(score_a: int, mask_a: int, upper_a: int,
     Simplified interface for win probability calculation.
 
     Args:
-        score_a: Player A's current score
+        score_a: Player A's category points, excluding the deferred upper bonus
         mask_a: Player A's filled categories mask
         upper_a: Player A's upper section subtotal
         score_b, mask_b, upper_b: Same for player B

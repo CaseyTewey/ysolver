@@ -5,16 +5,18 @@ Joker Mode Precomputation using Numba JIT compilation.
 This computes all Yahtzee Joker Mode optimal values.
 State space is 3x larger due to yahtzee_status variable.
 
-Estimated runtime: 30-60 minutes on modern hardware.
-Output: ev_cache_joker.pkl (~400 MB)
+Uses an exact partial-hand lattice to reuse reroll expectations.
+Output: ev_cache_joker.pkl (~12.6 MB), typically computed in seconds.
 """
 
 import numpy as np
 from numba import njit, prange
+from precompute_fast import build_reroll_lattice, compute_reroll_lattice
 import pickle
 import os
 import time
 import sys
+import tempfile
 from pathlib import Path
 
 # Constants
@@ -32,6 +34,8 @@ YAHTZEE_SCORED = 2
 YAHTZEE_BONUS = 100
 YAHTZEE_CATEGORY = 11
 NUM_YAHTZEE_STATUS = 3
+LOWER_MASK = FULL_MASK ^ ((1 << 6) - 1)
+CACHE_VERSION = '3.0-hasbro-joker'
 
 CACHE_FILE = Path(__file__).parent / "ev_cache_joker.pkl"
 
@@ -96,13 +100,15 @@ def compute_v3_joker_for_mask(mask, upper, yahtzee_status,
     for rid in range(NUM_ROLLS):
         is_ytz = is_yahtzee[rid]
         ytz_face = yahtzee_face[rid]
+        joker_active = is_ytz and yahtzee_status != YAHTZEE_UNFILLED
+        lower_available = (mask & LOWER_MASK) != LOWER_MASK
 
         # Joker bonus
         joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
 
-        # Check forced category (only when eligible for joker bonus)
+        # Joker placement also applies when the Yahtzee box was scratched.
         forced_cat = -1
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED and ytz_face >= 0:
+        if is_ytz and yahtzee_status != YAHTZEE_UNFILLED and ytz_face >= 0:
             upper_cat = ytz_face
             if not (mask & (1 << upper_cat)):
                 forced_cat = upper_cat
@@ -116,9 +122,11 @@ def compute_v3_joker_for_mask(mask, upper, yahtzee_status,
             # Skip if forced to different category
             if forced_cat >= 0 and cat != forced_cat:
                 continue
+            if joker_active and forced_cat < 0 and lower_available and cat < 6:
+                continue
 
             # Get score using appropriate table
-            if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+            if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
                 pts = joker_score_table[rid, cat]
             else:
                 pts = score_table[rid, cat]
@@ -254,13 +262,32 @@ def compute_turn_ev_joker(v1, initial_rolls):
     return ev
 
 
+@njit(cache=True)
+def compute_mask_joker_lattice(mask, score_table, joker_score_table, ev_remaining,
+                              is_yahtzee, yahtzee_face, children, parents,
+                              full_start, initial_rolls):
+    """Solve all upper/status states for one mask using shared partial hands."""
+    v3 = np.empty(NUM_ROLLS, dtype=np.float64)
+    v2 = np.empty(NUM_ROLLS, dtype=np.float64)
+    v1 = np.empty(NUM_ROLLS, dtype=np.float64)
+    best_cat = np.empty(NUM_ROLLS, dtype=np.int8)
+    for upper in range(MAX_UPPER + 1):
+        for status in range(NUM_YAHTZEE_STATUS):
+            compute_v3_joker_for_mask(
+                mask, upper, status, score_table, joker_score_table,
+                ev_remaining, is_yahtzee, yahtzee_face, v3, best_cat)
+            compute_reroll_lattice(v3, children, parents, full_start, v2)
+            compute_reroll_lattice(v2, children, parents, full_start, v1)
+            ev_remaining[mask, upper, status] = compute_turn_ev_joker(v1, initial_rolls)
+
+
 def precompute_joker(verbose=True):
     """
     Precompute joker mode EV tables using Numba JIT.
 
     State space: 8192 masks x 64 upper values x 3 yahtzee_status = 1,572,864 states
     """
-    from precompute_fast import build_transition_arrays
+    from dice import initial_roll_distribution
 
     if verbose:
         print("=" * 60)
@@ -282,10 +309,11 @@ def precompute_joker(verbose=True):
 
     # Step 2: Build transition arrays
     if verbose:
-        print("[2/4] Building transition arrays...")
+        print("[2/4] Building partial-hand reroll lattice...")
         sys.stdout.flush()
     start = time.time()
-    trans = build_transition_arrays()
+    children, parents, full_start = build_reroll_lattice()
+    initial_rolls = np.array(initial_roll_distribution(), dtype=np.float64)
     if verbose:
         print(f"      Done in {time.time()-start:.1f}s")
 
@@ -296,12 +324,6 @@ def precompute_joker(verbose=True):
 
     # Main EV array: (mask, upper, yahtzee_status)
     ev_remaining = np.zeros((FULL_MASK + 1, MAX_UPPER + 1, NUM_YAHTZEE_STATUS), dtype=np.float64)
-
-    # Temporary arrays for single state computation
-    v3_temp = np.zeros(NUM_ROLLS, dtype=np.float64)
-    v2_temp = np.zeros(NUM_ROLLS, dtype=np.float64)
-    v1_temp = np.zeros(NUM_ROLLS, dtype=np.float64)
-    best_cat_temp = np.zeros(NUM_ROLLS, dtype=np.int8)
 
     # Base case: full mask
     for upper in range(MAX_UPPER + 1):
@@ -331,70 +353,29 @@ def precompute_joker(verbose=True):
         masks = masks_by_bits[num_filled]
 
         for mask in masks:
-            for upper in range(MAX_UPPER + 1):
-                for yahtzee_status in range(NUM_YAHTZEE_STATUS):
-                    # Compute v3
-                    compute_v3_joker_for_mask(
-                        mask, upper, yahtzee_status,
-                        joker_arrays['score_table'],
-                        joker_arrays['joker_score_table'],
-                        ev_remaining,
-                        joker_arrays['is_yahtzee'],
-                        joker_arrays['yahtzee_face'],
-                        v3_temp, best_cat_temp
-                    )
-
-                    # Compute v2
-                    compute_v2_joker(
-                        v3_temp, trans['num_keeps'],
-                        trans['trans_starts'], trans['trans_ends'],
-                        trans['trans_next'], trans['trans_prob'],
-                        v2_temp
-                    )
-
-                    # Compute v1
-                    compute_v1_joker(
-                        v2_temp, trans['num_keeps'],
-                        trans['trans_starts'], trans['trans_ends'],
-                        trans['trans_next'], trans['trans_prob'],
-                        v1_temp
-                    )
-
-                    # Compute turn EV
-                    turn_ev = compute_turn_ev_joker(v1_temp, trans['initial_rolls'])
-
-                    # Store in ev_remaining
-                    ev_remaining[mask, upper, yahtzee_status] = turn_ev
-
-                    completed += 1
-
-                    # Progress update
-                    if verbose:
-                        now = time.time()
-                        if now - last_update >= 1.0 or completed == total_states:
-                            elapsed = now - start_time
-                            pct = 100.0 * completed / total_states
-                            rate = completed / elapsed if elapsed > 0 else 1
-                            eta = (total_states - completed) / rate if rate > 0 else 0
-
-                            bar_width = 30
-                            filled_bar = int(bar_width * completed / total_states)
-                            bar = "█" * filled_bar + "░" * (bar_width - filled_bar)
-
-                            print(f"\r      [{bar}] {pct:5.1f}% | "
-                                  f"Elapsed: {elapsed/60:.1f}m | ETA: {eta/60:.1f}m   ", end="")
-                            sys.stdout.flush()
-                            last_update = now
+            compute_mask_joker_lattice(
+                mask, joker_arrays['score_table'], joker_arrays['joker_score_table'],
+                ev_remaining, joker_arrays['is_yahtzee'], joker_arrays['yahtzee_face'],
+                children, parents, full_start, initial_rolls)
+            completed += (MAX_UPPER + 1) * NUM_YAHTZEE_STATUS
+            if verbose:
+                now = time.time()
+                if now - last_update >= 1.0 or completed == total_states:
+                    elapsed = now - start_time
+                    rate = completed / elapsed if elapsed else 1
+                    eta = (total_states - completed) / rate
+                    print(f"\r      {100 * completed / total_states:5.1f}% | "
+                          f"Elapsed: {elapsed:.0f}s | ETA: {eta:.0f}s   ", end="", flush=True)
+                    last_update = now
 
     total_time = time.time() - start_time
 
     if verbose:
         print(f"\n\n      Done in {total_time/60:.1f} minutes!")
         print(f"      Fresh game EV (joker, unfilled): {ev_remaining[0, 0, 0]:.2f}")
-        print(f"      Fresh game EV (joker, scored):   {ev_remaining[0, 0, 2]:.2f}")
 
     return {
-        'version': '2.0-joker',
+        'version': CACHE_VERSION,
         'mode': 'joker',
         'ev_remaining': ev_remaining,
         'score_table': joker_arrays['score_table'],
@@ -405,20 +386,44 @@ def precompute_joker(verbose=True):
 
 
 def save_cache(tables, filepath=CACHE_FILE):
-    """Save computed tables to disk."""
+    """Atomically replace the cache so readers cannot see a partial pickle."""
+    filepath = Path(filepath)
     print(f"\nSaving cache to {filepath}...")
-    with open(filepath, 'wb') as f:
-        pickle.dump(tables, f, protocol=pickle.HIGHEST_PROTOCOL)
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=filepath.parent, delete=False) as f:
+            temporary_path = Path(f.name)
+            pickle.dump(tables, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(temporary_path, filepath)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
     size_mb = os.path.getsize(filepath) / 1e6
     print(f"Saved! ({size_mb:.1f} MB)")
 
 
 def load_cache(filepath=CACHE_FILE):
-    """Load computed tables from disk."""
+    """Load compatible, complete arrays before exposing them to Numba."""
+    filepath = Path(filepath)
     if not filepath.exists():
         return None
     with open(filepath, 'rb') as f:
-        return pickle.load(f)
+        tables = pickle.load(f)
+    if not isinstance(tables, dict) or tables.get('version') != CACHE_VERSION:
+        return None
+    values = tables.get('ev_remaining')
+    if (not isinstance(values, np.ndarray)
+            or values.shape != (FULL_MASK + 1, MAX_UPPER + 1, NUM_YAHTZEE_STATUS)
+            or values.dtype != np.float64 or not np.isfinite(values).all()):
+        return None
+    expected = build_joker_arrays()
+    if any(not isinstance(tables.get(key), np.ndarray)
+           or tables[key].shape != value.shape
+           or tables[key].dtype != value.dtype
+           or not np.array_equal(tables[key], value)
+           for key, value in expected.items()):
+        return None
+    return tables
 
 
 def get_joker_tables(force_recompute=False, verbose=True):
@@ -427,9 +432,10 @@ def get_joker_tables(force_recompute=False, verbose=True):
         if verbose:
             print(f"Loading cached joker tables from {CACHE_FILE}...")
         tables = load_cache()
-        if verbose:
-            print(f"Loaded! Fresh game EV (joker): {tables['ev_remaining'][0, 0, 0]:.2f}")
-        return tables
+        if tables is not None:
+            if verbose:
+                print(f"Loaded! Fresh game EV (joker): {tables['ev_remaining'][0, 0, 0]:.2f}")
+            return tables
 
     tables = precompute_joker(verbose=verbose)
     save_cache(tables)
@@ -448,12 +454,9 @@ if __name__ == "__main__":
     print("VALIDATION")
     print("=" * 60)
     ev_unfilled = tables['ev_remaining'][0, 0, YAHTZEE_UNFILLED]
-    ev_scored = tables['ev_remaining'][0, 0, YAHTZEE_SCORED]
 
     print(f"Expected score from fresh game (yahtzee unfilled): {ev_unfilled:.2f}")
-    print(f"Expected score from fresh game (yahtzee scored):   {ev_scored:.2f}")
-    print(f"(Literature value for traditional: ~254-255)")
-    print(f"(Joker mode should be slightly higher due to bonus potential)")
+    print("(Expected with Hasbro Joker rules: approximately 254.59)")
 
     if 250 < ev_unfilled < 270:
         print("\nStatus: LOOKS CORRECT!")

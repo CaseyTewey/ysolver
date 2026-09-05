@@ -14,13 +14,14 @@ Key differences from traditional PMF:
 import sys
 import time
 from typing import Dict, Tuple, List, Optional
+from threading import RLock
 import numpy as np
 from scipy.signal import fftconvolve
 
 from dice import Counts, enumerate_rolls, roll_id, id_to_roll
 from scoring import (
     get_score_table, NUM_CATEGORIES, UPPER_BONUS,
-    UPPER_BONUS_THRESHOLD, is_upper_category, get_legal_categories
+    UPPER_BONUS_THRESHOLD, is_upper_category, get_legal_categories, get_legal_categories_joker
 )
 from transitions import get_keep_options, get_transition_dist, get_initial_roll_dist
 from ev_solver import (
@@ -40,119 +41,10 @@ PMF = Dict[int, float]
 # PMF Helper Functions (same as pmf_solver.py)
 # =============================================================================
 
-def prune_pmf(pmf: PMF, eps: float = 1e-7, topk: int = 2000) -> PMF:
-    """
-    Prune a PMF to reduce size while preserving most mass.
-
-    Args:
-        pmf: Input probability mass function
-        eps: Minimum probability threshold
-        topk: Maximum number of entries to keep
-
-    Returns:
-        Pruned PMF (renormalized)
-    """
-    if len(pmf) <= topk:
-        # Just remove tiny probabilities
-        pruned = {k: v for k, v in pmf.items() if v >= eps}
-    else:
-        # Keep top-k by probability mass
-        sorted_items = sorted(pmf.items(), key=lambda x: -x[1])[:topk]
-        pruned = {k: v for k, v in sorted_items if v >= eps}
-
-    # Renormalize
-    total = sum(pruned.values())
-    if total > 0 and abs(total - 1.0) > 1e-9:
-        pruned = {k: v / total for k, v in pruned.items()}
-
-    return pruned
-
-
-def shift_pmf(pmf: PMF, delta: int) -> PMF:
-    """Shift all scores in PMF by delta."""
-    return {k + delta: v for k, v in pmf.items()}
-
-
-def convolve_pmf(pmf1: PMF, pmf2: PMF) -> PMF:
-    """
-    Convolve two PMFs using FFT for O(n log n) complexity.
-
-    This replaces the naive O(n^2) nested loop implementation with
-    scipy.signal.fftconvolve for dramatic speedup on large PMFs.
-
-    Result[k] = sum over i,j where i+j=k of pmf1[i] * pmf2[j]
-
-    Args:
-        pmf1: First probability mass function (score -> probability)
-        pmf2: Second probability mass function (score -> probability)
-
-    Returns:
-        Convolved PMF representing the distribution of the sum
-    """
-    # Handle edge cases
-    if not pmf1 or not pmf2:
-        return {}
-
-    if len(pmf1) == 1 and len(pmf2) == 1:
-        # Both single-entry: direct computation is faster
-        s1, p1 = next(iter(pmf1.items()))
-        s2, p2 = next(iter(pmf2.items()))
-        return {s1 + s2: p1 * p2}
-
-    # For very small PMFs, use direct computation (faster than FFT overhead)
-    if len(pmf1) * len(pmf2) < 500:
-        result = {}
-        for s1, p1 in pmf1.items():
-            for s2, p2 in pmf2.items():
-                s = s1 + s2
-                result[s] = result.get(s, 0.0) + p1 * p2
-        return result
-
-    # Convert sparse PMF dicts to dense arrays for FFT
-    min1, max1 = min(pmf1.keys()), max(pmf1.keys())
-    min2, max2 = min(pmf2.keys()), max(pmf2.keys())
-
-    # Create dense arrays (offset so indices start at 0)
-    arr1 = np.zeros(max1 - min1 + 1, dtype=np.float64)
-    arr2 = np.zeros(max2 - min2 + 1, dtype=np.float64)
-
-    for s, p in pmf1.items():
-        arr1[s - min1] = p
-    for s, p in pmf2.items():
-        arr2[s - min2] = p
-
-    # FFT convolution: O(n log n) instead of O(n^2)
-    conv = fftconvolve(arr1, arr2, mode='full')
-
-    # Convert back to sparse PMF dict
-    # The result array starts at index 0, corresponding to score min1 + min2
-    result_min = min1 + min2
-    result = {}
-
-    # Use a threshold to avoid storing near-zero probabilities
-    eps = 1e-15
-    for i, p in enumerate(conv):
-        if p > eps:
-            result[result_min + i] = p
-
-    return result
-
-
-def mix_pmfs(pmfs_with_weights: List[Tuple[PMF, float]]) -> PMF:
-    """
-    Create mixture of PMFs with given weights.
-
-    Args:
-        pmfs_with_weights: List of (pmf, weight) pairs
-
-    Returns:
-        Mixed PMF
-    """
-    result = {}
-    for pmf, weight in pmfs_with_weights:
-        for score, prob in pmf.items():
-            result[score] = result.get(score, 0.0) + prob * weight
-    return result
+from pmf_solver import (
+    prune_pmf, shift_pmf, convolve_pmf, mix_pmfs,
+    _final_roll_distribution, _validate_pmf_state,
+)
 
 
 # =============================================================================
@@ -184,44 +76,40 @@ def print_progress_bar(current: int, total: int, start_time: float,
 # Joker Mode PMF Cache
 # =============================================================================
 
-# Cache key: (mask, upper, yahtzee_status)
-# Using OrderedDict for LRU eviction
+# Cache options are part of the key; all access uses the same recursive lock.
 from collections import OrderedDict
 
-_PMF_JOKER_CACHE = OrderedDict()  # OrderedDict[Tuple[int, int, int], PMF]
-_PMF_CACHE_MAX_SIZE = 10000  # Limit cache to 10K entries (~50-100MB max)
+_PMF_JOKER_CACHE = OrderedDict()
+_PMF_CACHE_MAX_SIZE = 10000
+_PMF_JOKER_LOCK = RLock()
 
 
 def clear_pmf_joker_cache():
-    """Clear the joker PMF cache."""
-    global _PMF_JOKER_CACHE
-    _PMF_JOKER_CACHE = OrderedDict()
+    """Clear the joker PMF cache after any current solve completes."""
+    with _PMF_JOKER_LOCK:
+        _PMF_JOKER_CACHE.clear()
 
 
 def get_pmf_cache_size() -> int:
     """Get current cache size."""
-    return len(_PMF_JOKER_CACHE)
+    with _PMF_JOKER_LOCK:
+        return len(_PMF_JOKER_CACHE)
 
 
-def _cache_get(key: Tuple[int, int, int]) -> Optional[PMF]:
-    """Get from cache with LRU update."""
-    if key in _PMF_JOKER_CACHE:
-        # Move to end (most recently used)
-        _PMF_JOKER_CACHE.move_to_end(key)
-        return _PMF_JOKER_CACHE[key]
+def _cache_get(key: Tuple) -> Optional[PMF]:
+    with _PMF_JOKER_LOCK:
+        if key in _PMF_JOKER_CACHE:
+            _PMF_JOKER_CACHE.move_to_end(key)
+            return _PMF_JOKER_CACHE[key]
     return None
 
 
-def _cache_put(key: Tuple[int, int, int], value: PMF):
-    """Put in cache with LRU eviction."""
-    global _PMF_JOKER_CACHE
-    if key in _PMF_JOKER_CACHE:
+def _cache_put(key: Tuple, value: PMF):
+    with _PMF_JOKER_LOCK:
+        _PMF_JOKER_CACHE[key] = value
         _PMF_JOKER_CACHE.move_to_end(key)
-    else:
-        if len(_PMF_JOKER_CACHE) >= _PMF_CACHE_MAX_SIZE:
-            # Evict oldest (first) entry
+        if len(_PMF_JOKER_CACHE) > _PMF_CACHE_MAX_SIZE:
             _PMF_JOKER_CACHE.popitem(last=False)
-    _PMF_JOKER_CACHE[key] = value
 
 
 # =============================================================================
@@ -290,29 +178,16 @@ def _get_best_category_joker_full(roll_idx: int, mask: int, upper: int,
         (category, points_including_bonus, next_upper, next_yahtzee_status)
     """
     is_ytz_arr = tables['is_yahtzee']
-    ytz_face_arr = tables['yahtzee_face']
     score_table = tables['score_table']
     joker_score_table = tables['joker_score_table']
     ev_remaining_arr = tables['ev_remaining']
 
     is_ytz = is_ytz_arr[roll_idx]
-    ytz_face = ytz_face_arr[roll_idx]
 
     # Joker bonus if rolling another yahtzee after scoring 50
     joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
 
-    # Check for forced category
-    forced_cat = None
-    if is_ytz and yahtzee_status == YAHTZEE_SCORED:
-        upper_cat = ytz_face
-        if not (mask & (1 << upper_cat)):
-            forced_cat = upper_cat
-
-    legal_cats = get_legal_categories(mask)
-
-    # If forced, only consider that category
-    if forced_cat is not None:
-        legal_cats = [forced_cat]
+    legal_cats = get_legal_categories_joker(roll_idx, mask, yahtzee_status)
 
     best_ev = float('-inf')
     best_cat = None
@@ -322,7 +197,7 @@ def _get_best_category_joker_full(roll_idx: int, mask: int, upper: int,
 
     for cat in legal_cats:
         # Use joker score table if eligible for joker
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+        if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
             pts = int(joker_score_table[roll_idx, cat])
         else:
             pts = int(score_table[roll_idx, cat])
@@ -351,64 +226,39 @@ def _get_best_category_joker_full(roll_idx: int, mask: int, upper: int,
 
 
 def compute_turn_pmf_joker(mask: int, upper: int, yahtzee_status: int,
-                           eps: float = 1e-7, topk: int = 2000) -> Dict[Tuple[int, int, int, int], float]:
+                           eps: float = 0.0, topk: int = 2000) -> Dict[Tuple[int, int, int, int], float]:
     """
     Compute distribution of turn outcomes under optimal joker policy.
 
-    This function enumerates all possible paths through a turn and
-    accumulates the probability of each unique outcome.
+    Propagate all probability mass through the two reroll stages, then
+    aggregate final scoring outcomes. eps/topk are accepted for compatibility;
+    approximation is applied only to the completed score PMF.
 
     Args:
         mask: Filled categories bitmask
         upper: Upper section subtotal (clamped)
         yahtzee_status: Current yahtzee status (0, 1, or 2)
-        eps: Probability pruning threshold
-        topk: Max outcomes to keep
+        eps: Reserved for score-PMF pruning; turn paths retain all mass
+        topk: Reserved for score-PMF pruning; turn outcomes retain all mass
 
     Returns:
         Dict mapping (points, next_mask, next_upper, next_yahtzee_status) -> probability
     """
+    upper = _validate_pmf_state(mask, upper, eps, topk)
+    _validate_yahtzee_status(mask, yahtzee_status)
+    if mask == FULL_MASK:
+        return {(0, mask, upper, yahtzee_status): 1.0}
     tables = _load_joker_tables()
+    keep_indices1, keep_indices2 = _precompute_best_keeps_joker(mask, upper, yahtzee_status, tables)
+    keeps1 = [get_keep_options(rid)[index] for rid, index in enumerate(keep_indices1)]
+    keeps2 = [get_keep_options(rid)[index] for rid, index in enumerate(keep_indices2)]
     result = {}
-
-    # Pre-compute best keeps for all rolls in this state (key optimization!)
-    best_keep_roll1, best_keep_roll2 = _precompute_best_keeps_joker(
-        mask, upper, yahtzee_status, tables
-    )
-
-    # Enumerate all paths through the turn
-    for roll1_idx, p1 in get_initial_roll_dist():
-        if p1 < eps:
-            continue
-
-        # Get optimal keep after roll 1 (using pre-computed index)
-        keep_options1 = get_keep_options(roll1_idx)
-        keep1 = keep_options1[best_keep_roll1[roll1_idx]]
-
-        for roll2_idx, p2 in get_transition_dist(roll1_idx, keep1):
-            if p1 * p2 < eps:
-                continue
-
-            # Get optimal keep after roll 2 (using pre-computed index)
-            keep_options2 = get_keep_options(roll2_idx)
-            keep2 = keep_options2[best_keep_roll2[roll2_idx]]
-
-            for roll3_idx, p3 in get_transition_dist(roll2_idx, keep2):
-                path_prob = p1 * p2 * p3
-                if path_prob < eps:
-                    continue
-
-                # Get optimal category and state transition
-                cat, pts, next_upper, next_ys = _get_best_category_joker_full(
-                    roll3_idx, mask, upper, yahtzee_status, tables
-                )
-
-                next_mask = mask | (1 << cat)
-
-                # Accumulate probability
-                key = (pts, next_mask, next_upper, next_ys)
-                result[key] = result.get(key, 0.0) + path_prob
-
+    for roll_idx, probability in _final_roll_distribution(keeps1, keeps2).items():
+        cat, pts, next_upper, next_ys = _get_best_category_joker_full(
+            roll_idx, mask, upper, yahtzee_status, tables
+        )
+        key = (pts, mask | (1 << cat), next_upper, next_ys)
+        result[key] = result.get(key, 0.0) + probability
     return result
 
 
@@ -416,60 +266,48 @@ def compute_turn_pmf_joker(mask: int, upper: int, yahtzee_status: int,
 # Joker PMF Remaining (Recursive)
 # =============================================================================
 
+def _validate_yahtzee_status(mask: int, yahtzee_status: int):
+    if isinstance(yahtzee_status, bool) or not isinstance(yahtzee_status, int) or yahtzee_status not in (0, 1, 2):
+        raise ValueError("yahtzee_status must be 0, 1, or 2")
+    if bool(mask & (1 << YAHTZEE_CATEGORY)) != (yahtzee_status != YAHTZEE_UNFILLED):
+        raise ValueError("yahtzee_status must agree with whether the Yahtzee category is filled")
+
+
 def pmf_remaining_joker(mask: int, upper: int, yahtzee_status: int,
-                        eps: float = 1e-7, topk: int = 2000) -> PMF:
+                        eps: float = 0.0, topk: int = 2000) -> PMF:
+    """Return remaining points, future Yahtzee bonuses, and the terminal upper bonus.
+
+    Locked scores must include earned Yahtzee bonuses but exclude the upper
+    bonus. Defaults preserve all outcomes. Positive eps or restrictive topk
+    requests approximation. Restrict interactive solves to late-game states.
     """
-    Compute distribution of remaining score under optimal joker policy.
+    upper = _validate_pmf_state(mask, upper, eps, topk)
+    _validate_yahtzee_status(mask, yahtzee_status)
+    with _PMF_JOKER_LOCK:
+        return _pmf_remaining_joker(mask, upper, yahtzee_status, eps, topk).copy()
 
-    This function recursively computes the PMF of remaining scores
-    by convolving turn outcomes with future PMFs.
 
-    Args:
-        mask: Filled categories bitmask
-        upper: Upper section subtotal (clamped)
-        yahtzee_status: Current yahtzee status (0=unfilled, 1=scratched, 2=scored)
-        eps: Probability pruning threshold
-        topk: Max PMF entries
-
-    Returns:
-        PMF mapping additional_score -> probability
-    """
-    cache_key = (mask, upper, yahtzee_status)
+def _pmf_remaining_joker(mask: int, upper: int, yahtzee_status: int,
+                         eps: float, topk: int) -> PMF:
+    cache_key = (mask, upper, yahtzee_status, eps, topk)
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-
-    # Base case: all categories filled
     if mask == FULL_MASK:
-        bonus = UPPER_BONUS if upper >= UPPER_BONUS_THRESHOLD else 0
-        result = {bonus: 1.0}
-        _cache_put(cache_key, result)
-        return result
-
-    # Compute turn PMF and convolve with future
-    turn_result = compute_turn_pmf_joker(mask, upper, yahtzee_status, eps, topk)
-
-    # turn_result maps (points, next_mask, next_upper, next_ys) -> probability
-    # We need to convolve each outcome with its future PMF
-
-    final_pmf = {}
-
-    for (pts, next_mask, next_upper, next_ys), prob in turn_result.items():
-        # Get future PMF from next state (recursive call)
-        future_pmf = pmf_remaining_joker(next_mask, next_upper, next_ys, eps, topk)
-
-        # Shift future PMF by points scored this turn
-        shifted = shift_pmf(future_pmf, pts)
-
-        # Add to mixture
-        for score, p in shifted.items():
-            final_pmf[score] = final_pmf.get(score, 0.0) + prob * p
-
-    # Prune result
-    final_pmf = prune_pmf(final_pmf, eps, topk)
-
-    _cache_put(cache_key, final_pmf)
-    return final_pmf
+        result = {UPPER_BONUS if upper >= UPPER_BONUS_THRESHOLD else 0: 1.0}
+    else:
+        final_pmf = {}
+        for (pts, next_mask, next_upper, next_ys), prob in compute_turn_pmf_joker(
+            mask, upper, yahtzee_status
+        ).items():
+            for score, future_prob in _pmf_remaining_joker(
+                next_mask, next_upper, next_ys, eps, topk
+            ).items():
+                total_score = score + pts
+                final_pmf[total_score] = final_pmf.get(total_score, 0.0) + prob * future_prob
+        result = prune_pmf(final_pmf, eps, topk)
+    _cache_put(cache_key, result)
+    return result
 
 
 # =============================================================================
@@ -536,7 +374,7 @@ def compute_win_probability_exact(
     Compute exact win probability using full PMF distributions.
 
     Args:
-        p1_locked: Player 1's locked score (already earned)
+        p1_locked: Player 1's category points plus earned Yahtzee bonuses, excluding the upper bonus
         p1_mask: Player 1's filled categories mask
         p1_upper: Player 1's upper section subtotal
         p1_yahtzee_status: Player 1's yahtzee status
@@ -571,7 +409,7 @@ def compute_win_probability_exact(
             else:
                 tie_prob += joint_prob
 
-    return (p1_wins, tie_prob, p2_wins)
+    return tuple(min(1.0, max(0.0, probability)) for probability in (p1_wins, tie_prob, p2_wins))
 
 
 # =============================================================================
@@ -603,7 +441,7 @@ def warm_pmf_cache_joker(max_unfilled: int = 5, verbose: bool = True):
                 for ys in range(3):  # UNFILLED, SCRATCHED, SCORED
                     # Skip invalid states (e.g., SCORED but yahtzee category not filled)
                     yahtzee_filled = bool(mask & (1 << YAHTZEE_CATEGORY))
-                    if ys != YAHTZEE_UNFILLED and not yahtzee_filled:
+                    if yahtzee_filled != (ys != YAHTZEE_UNFILLED):
                         continue
                     states_to_compute.append((mask, upper, ys))
 

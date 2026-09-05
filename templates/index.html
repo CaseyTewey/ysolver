@@ -131,7 +131,7 @@
             opacity: 0.8;
             margin-top: 4px;
         }
-        .exact-calc-btn {
+        .probability-retry-btn {
             background: linear-gradient(135deg, #00bcd4, #0097a7);
             border: none;
             color: white;
@@ -141,32 +141,9 @@
             font-size: 0.9em;
             transition: all 0.2s;
         }
-        .exact-calc-btn:hover {
+        .probability-retry-btn:hover {
             transform: scale(1.02);
             box-shadow: 0 2px 8px rgba(0, 188, 212, 0.4);
-        }
-        .exact-calc-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .exact-calc-btn.loading {
-            position: relative;
-            color: transparent;
-        }
-        .exact-calc-btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            top: 50%;
-            left: 50%;
-            margin-left: -8px;
-            margin-top: -8px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
         }
         .exact-result {
             background: rgba(0, 188, 212, 0.15);
@@ -1561,7 +1538,7 @@
                 font-size: 0.8em;
                 padding: 6px;
             }
-            .exact-calc-btn {
+            .probability-retry-btn {
                 padding: 6px 12px;
                 font-size: 0.85em;
             }
@@ -1740,11 +1717,13 @@
                         <span class="player-name"><span class="full-name">Player 1</span><span class="short-name">P1</span></span>
                         <div class="win-prob">
                             <div class="win-prob-bar">
-                                <div class="win-prob-fill" id="win-prob-fill-1" style="width: 50%"></div>
+                                <div class="win-prob-fill" id="win-prob-fill-1" style="width: 0%"></div>
                             </div>
-                            <span class="win-prob-value" id="win-prob-1">50%</span>
+                            <span class="win-prob-value" id="win-prob-1">--</span>
                         </div>
-                        <span class="expected-score"><span class="full-name">Expected:</span> <span id="expected-1">246</span></span>
+                        <span class="expected-score" id="win-prob-method-1">Calculating odds…</span>
+                        <span class="expected-score hidden" id="win-prob-interval-1"></span>
+                        <span class="expected-score"><span class="full-name">Expected:</span> <span id="expected-1">--</span></span>
                     </div>
                 </h2>
                 <div id="scores-1"></div>
@@ -1757,11 +1736,13 @@
                         <span class="player-name"><span class="full-name">Player 2</span><span class="short-name">P2</span></span>
                         <div class="win-prob">
                             <div class="win-prob-bar">
-                                <div class="win-prob-fill" id="win-prob-fill-2" style="width: 50%"></div>
+                                <div class="win-prob-fill" id="win-prob-fill-2" style="width: 0%"></div>
                             </div>
-                            <span class="win-prob-value" id="win-prob-2">50%</span>
+                            <span class="win-prob-value" id="win-prob-2">--</span>
                         </div>
-                        <span class="expected-score"><span class="full-name">Expected:</span> <span id="expected-2">246</span></span>
+                        <span class="expected-score" id="win-prob-method-2">Calculating odds…</span>
+                        <span class="expected-score hidden" id="win-prob-interval-2"></span>
+                        <span class="expected-score"><span class="full-name">Expected:</span> <span id="expected-2">--</span></span>
                     </div>
                 </h2>
                 <div id="scores-2"></div>
@@ -1855,19 +1836,19 @@
                     Confirm Turn & Log
                 </button>
 
-                <!-- Edge case warning and exact calculation -->
-                <div class="edge-case-container hidden" id="edge-case-container">
+                <!-- Automatic probability method, limitations, and ties -->
+                <div class="edge-case-container" id="edge-case-container" role="status" aria-live="polite">
                     <div class="edge-case-warning" id="edge-case-warning">
-                        <span class="edge-case-warning-icon">&#9888;</span>
-                        <span id="edge-case-title">Win probability may be approximate</span>
+                        <strong id="edge-case-title">Calculating odds…</strong>
                         <div class="edge-case-reasons" id="edge-case-reasons"></div>
                     </div>
-                    <button class="exact-calc-btn hidden" id="exact-calc-btn" onclick="calculateExactWinProb()">
-                        Calculate Exact Win %
+                    <button class="probability-retry-btn hidden" id="win-prob-retry" onclick="updateWinProbabilities()">
+                        Retry odds
                     </button>
                     <div class="exact-result hidden" id="exact-result">
-                        <div class="exact-result-label">Exact Calculation:</div>
+                        <div class="exact-result-label">Match outcomes:</div>
                         <div class="exact-result-values" id="exact-result-values"></div>
+                        <div class="exact-result-label hidden" id="tie-probability-interval"></div>
                     </div>
                 </div>
             </div>
@@ -1922,6 +1903,10 @@
 
         // Win probability tracking for animations
         let previousWinProbs = { 1: 50, 2: 50 };
+        let previousWinProbabilityMethod = null;
+        let winProbabilityRequestKey = null;
+        let winProbabilityRequestController = null;
+        let winProbabilityRequestSequence = 0;
 
         // Track if we're waiting for user action after showing recommendation
         let waitingForAction = false;
@@ -2082,7 +2067,7 @@
             let bonusRow = document.getElementById(`joker-bonus-row-${player}`);
             if (!bonusRow) {
                 // Create it after the yahtzee row
-                const yahtzeeRow = document.querySelector(`#player${player}-scores .score-row[data-category="11"]`);
+                const yahtzeeRow = document.getElementById(`row-${player}-11`);
                 if (yahtzeeRow) {
                     bonusRow = document.createElement('div');
                     bonusRow.id = `joker-bonus-row-${player}`;
@@ -2743,6 +2728,7 @@
         function saveState() {
             history.push({
                 activePlayer,
+                currentTurn,
                 rollsRemaining,
                 currentDieIndex,
                 diceEntered,
@@ -2775,6 +2761,15 @@
 
             // Restore scores
             playerScores = state.playerScores;
+            // Restore Joker state before totals, which include earned bonuses.
+            if (state.yahtzeeStatus) {
+                yahtzeeStatus = {...state.yahtzeeStatus};
+            }
+            if (state.yahtzeeBonuses) {
+                yahtzeeBonuses = {...state.yahtzeeBonuses};
+            }
+            currentTurn = state.currentTurn ?? Math.min(26, 1 + [1, 2].reduce(
+                (total, player) => total + Object.values(playerScores[player]).filter(value => value !== undefined && value !== null).length, 0));
             for (let p = 1; p <= 2; p++) {
                 for (let cat = 0; cat < 13; cat++) {
                     const input = document.getElementById(`score-${p}-${cat}`);
@@ -2805,24 +2800,13 @@
                     }
                 }
                 updateTotals(p);
-            }
-
-            // Restore joker state if saved
-            if (state.yahtzeeStatus) {
-                yahtzeeStatus = {...state.yahtzeeStatus};
-            }
-            if (state.yahtzeeBonuses) {
-                yahtzeeBonuses = {...state.yahtzeeBonuses};
-                // Update joker bonus display
-                if (isJokerMode) {
-                    updateJokerBonusDisplay(1);
-                    updateJokerBonusDisplay(2);
-                }
+                updateJokerBonusDisplay(p);
             }
 
             // Update UI
             updateCurrentDieIndicator();
             setActivePlayer(activePlayer);
+            updateTurnDisplay();
             setRolls(rollsRemaining);
             updateWinProbabilities();
         }
@@ -3090,147 +3074,173 @@
             if (totalEl) totalEl.textContent = upperTotal + bonus + lowerTotal + jokerBonus;
         }
 
-        // Update win probabilities for both players
-        async function updateWinProbabilities() {
-            try {
-                const requestBody = {
-                    player1_scores: playerScores[1],
-                    player2_scores: playerScores[2]
-                };
+        // Odds are based on both scorecards at the start of their next turns.
+        function winProbabilityRequestBody() {
+            const requestBody = {
+                player1_scores: playerScores[1],
+                player2_scores: playerScores[2]
+            };
+            if (isJokerMode) {
+                requestBody.mode = 'joker';
+                requestBody.player1_yahtzee_status = yahtzeeStatus[1];
+                requestBody.player2_yahtzee_status = yahtzeeStatus[2];
+                requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
+                requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
+            }
+            return requestBody;
+        }
 
-                // Add joker mode parameters
-                if (isJokerMode) {
-                    requestBody.mode = 'joker';
-                    requestBody.player1_yahtzee_status = yahtzeeStatus[1];
-                    requestBody.player2_yahtzee_status = yahtzeeStatus[2];
-                    requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
-                    requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
-                }
-
-                const response = await fetch('/api/win_probability', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                const data = await response.json();
-
-                // Update Player 1
-                const p1Win = data.player1.win_probability;
-                document.getElementById('win-prob-1').textContent = p1Win + '%';
-                document.getElementById('win-prob-fill-1').style.width = p1Win + '%';
-                document.getElementById('win-prob-fill-1').classList.toggle('losing', p1Win < 50);
-                document.getElementById('expected-1').textContent = data.player1.expected_final;
-
-                // Update Player 2
-                const p2Win = data.player2.win_probability;
-                document.getElementById('win-prob-2').textContent = p2Win + '%';
-                document.getElementById('win-prob-fill-2').style.width = p2Win + '%';
-                document.getElementById('win-prob-fill-2').classList.toggle('losing', p2Win < 50);
-                document.getElementById('expected-2').textContent = data.player2.expected_final;
-
-                // Handle edge case warnings
-                const edgeCaseContainer = document.getElementById('edge-case-container');
-                const edgeCaseWarning = document.getElementById('edge-case-warning');
-                const edgeCaseReasons = document.getElementById('edge-case-reasons');
-                const exactCalcBtn = document.getElementById('exact-calc-btn');
-                const exactResult = document.getElementById('exact-result');
-
-                if (data.approximation && data.approximation.has_edge_case) {
-                    edgeCaseContainer.classList.remove('hidden');
-                    edgeCaseReasons.innerHTML = data.approximation.reasons.map(r => '• ' + r).join('<br>');
-
-                    // Show/hide exact calc button based on feasibility
-                    if (data.approximation.suggest_exact && data.approximation.exact_feasible) {
-                        exactCalcBtn.classList.remove('hidden');
-                        exactCalcBtn.disabled = false;
-                        exactCalcBtn.classList.remove('loading');
-                    } else {
-                        exactCalcBtn.classList.add('hidden');
-                    }
-
-                    // Hide any previous exact result
-                    exactResult.classList.add('hidden');
-                } else {
-                    edgeCaseContainer.classList.add('hidden');
-                }
-
-                // Check for big drops (troll animation)
-                checkForBigDrop(p1Win, p2Win);
-
-                // Update calc mode indicator
-                updateLastCalcInfo(data.mode || 'traditional', 'win_prob', data.player1.expected_final);
-
-            } catch (error) {
-                console.error('Error updating win probabilities:', error);
+        function showWinProbabilityStatus(label, detail = '') {
+            document.getElementById('edge-case-title').textContent = label;
+            document.getElementById('edge-case-reasons').textContent = detail;
+            for (const player of [1, 2]) {
+                document.getElementById(`win-prob-method-${player}`).textContent = label;
             }
         }
 
-        // Calculate exact win probability using PMF convolution
-        async function calculateExactWinProb() {
-            const exactCalcBtn = document.getElementById('exact-calc-btn');
-            const exactResult = document.getElementById('exact-result');
-            const exactResultValues = document.getElementById('exact-result-values');
+        function formatSamplingInterval(interval, confidenceLevel) {
+            return `${Math.round(confidenceLevel * 100)}% sampling interval: ${interval[0].toFixed(2)}–${interval[1].toFixed(2)}%`;
+        }
 
-            // Show loading state
-            exactCalcBtn.classList.add('loading');
-            exactCalcBtn.disabled = true;
+        function waitForWinProbabilityRetry(milliseconds, signal) {
+            return new Promise((resolve, reject) => {
+                const onAbort = () => {
+                    clearTimeout(timer);
+                    reject(new DOMException('Odds request cancelled', 'AbortError'));
+                };
+                const timer = setTimeout(() => {
+                    signal.removeEventListener('abort', onAbort);
+                    resolve();
+                }, milliseconds);
+                signal.addEventListener('abort', onAbort, { once: true });
+                if (signal.aborted) onAbort();
+            });
+        }
+
+        // The backend automatically selects exact endgame odds. Only the newest
+        // scorecard response may render; unchanged state reuses the current result.
+        async function updateWinProbabilities() {
+            const requestKey = JSON.stringify(winProbabilityRequestBody());
+            if (requestKey === winProbabilityRequestKey) return;
+            winProbabilityRequestKey = requestKey;
+            const sequence = ++winProbabilityRequestSequence;
+            if (winProbabilityRequestController) winProbabilityRequestController.abort();
+            const controller = new AbortController();
+            winProbabilityRequestController = controller;
+            const isCurrent = () => sequence === winProbabilityRequestSequence &&
+                requestKey === JSON.stringify(winProbabilityRequestBody());
+
+            // Never leave old percentages visible while a different state loads.
+            for (const player of [1, 2]) {
+                document.getElementById(`win-prob-${player}`).textContent = '--';
+                document.getElementById(`expected-${player}`).textContent = '--';
+                const interval = document.getElementById(`win-prob-interval-${player}`);
+                interval.textContent = '';
+                interval.classList.add('hidden');
+                const fill = document.getElementById(`win-prob-fill-${player}`);
+                fill.style.width = '0%';
+                fill.classList.remove('losing');
+            }
+            document.getElementById('exact-result').classList.add('hidden');
+            document.getElementById('exact-result-values').textContent = '';
+            document.getElementById('tie-probability-interval').textContent = '';
+            document.getElementById('tie-probability-interval').classList.add('hidden');
+            document.getElementById('win-prob-retry').classList.add('hidden');
+            showWinProbabilityStatus('Calculating odds…');
+
+            let timedOut = false;
+            const timeout = setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, 30000);
 
             try {
-                const requestBody = {
-                    player1_scores: playerScores[1],
-                    player2_scores: playerScores[2]
-                };
-
-                // Add joker mode parameters
-                if (isJokerMode) {
-                    requestBody.mode = 'joker';
-                    requestBody.player1_yahtzee_status = yahtzeeStatus[1];
-                    requestBody.player2_yahtzee_status = yahtzeeStatus[2];
-                    requestBody.player1_yahtzee_bonuses = yahtzeeBonuses[1];
-                    requestBody.player2_yahtzee_bonuses = yahtzeeBonuses[2];
+                let data;
+                for (let attempt = 0; attempt <= 6; attempt++) {
+                    const response = await fetch('/api/win_probability', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: requestKey,
+                        signal: controller.signal
+                    });
+                    if (!isCurrent()) return;
+                    if (response.status === 503 && attempt < 6) {
+                        showWinProbabilityStatus('Calculating odds…', 'The solver is busy. Retrying automatically…');
+                        const retryAfter = Number(response.headers.get('Retry-After') || 1);
+                        const baseDelay = Number.isFinite(retryAfter) ? Math.max(0.1, retryAfter) : 1;
+                        const delay = Math.min(5, baseDelay * (2 ** attempt)) * 1000;
+                        await waitForWinProbabilityRetry(delay, controller.signal);
+                        if (!isCurrent()) return;
+                        continue;
+                    }
+                    data = await response.json();
+                    if (!isCurrent()) return;
+                    if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+                    break;
                 }
 
-                const response = await fetch('/api/win_probability_exact', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                const data = await response.json();
-
-                if (data.error) {
-                    exactResultValues.textContent = 'Error: ' + data.error;
+                const simulated = data.method === 'monte_carlo';
+                const simulation = data.simulation;
+                const label = data.method === 'deterministic' ? 'Final result' :
+                    data.is_exact ? 'Exact odds (score-optimal play)' :
+                    `Estimated odds · ${simulation.sample_count.toLocaleString('en-US')} simulations`;
+                const approximation = data.approximation || {};
+                const assumptions = 'Based on scored categories, with a fresh turn for each player; current dice are not included. Both players are assumed to maximize expected score.';
+                let detail;
+                if (data.method === 'deterministic') {
+                    detail = 'Both scorecards are complete.';
+                } else if (data.is_exact) {
+                    detail = assumptions;
                 } else {
-                    // Update the display with exact values
-                    const p1Exact = data.player1.win_probability;
-                    const p2Exact = data.player2.win_probability;
-                    const tieProb = data.tie_probability || 0;
+                    detail = `The ${Math.round(simulation.confidence_level * 100)}% intervals describe simulation sampling uncertainty only. An outcome that was not observed in these simulations can still be possible. Exact odds appear automatically when each player has ${approximation.max_categories_for_exact || 4} or fewer categories left. ${assumptions}`;
+                }
+                showWinProbabilityStatus(label, detail);
 
-                    exactResultValues.innerHTML = `P1: ${p1Exact}% | P2: ${p2Exact}%` +
-                        (tieProb > 0 ? ` | Tie: ${tieProb}%` : '');
-
-                    // Also update the main win prob displays
-                    document.getElementById('win-prob-1').textContent = p1Exact + '%';
-                    document.getElementById('win-prob-fill-1').style.width = p1Exact + '%';
-                    document.getElementById('win-prob-fill-1').classList.toggle('losing', p1Exact < 50);
-
-                    document.getElementById('win-prob-2').textContent = p2Exact + '%';
-                    document.getElementById('win-prob-fill-2').style.width = p2Exact + '%';
-                    document.getElementById('win-prob-fill-2').classList.toggle('losing', p2Exact < 50);
+                for (const player of [1, 2]) {
+                    const values = data[`player${player}`];
+                    document.getElementById(`win-prob-${player}`).textContent = simulated ?
+                        values.win_probability_display : values.win_probability + '%';
+                    const fill = document.getElementById(`win-prob-fill-${player}`);
+                    fill.style.width = values.win_probability + '%';
+                    fill.classList.toggle('losing', values.win_probability < 50);
+                    document.getElementById(`expected-${player}`).textContent = values.expected_final;
+                    if (simulated) {
+                        const interval = document.getElementById(`win-prob-interval-${player}`);
+                        interval.textContent = formatSamplingInterval(values.win_probability_interval, simulation.confidence_level);
+                        interval.classList.remove('hidden');
+                    }
+                }
+                const player1Display = simulated ? data.player1.win_probability_display : `${data.player1.win_probability}%`;
+                const player2Display = simulated ? data.player2.win_probability_display : `${data.player2.win_probability}%`;
+                const tieDisplay = simulated ? data.tie_probability_display : `${data.tie_probability}%`;
+                document.getElementById('exact-result-values').textContent =
+                    `P1 wins: ${player1Display} | P2 wins: ${player2Display} | Tie: ${tieDisplay}`;
+                document.getElementById('exact-result').classList.remove('hidden');
+                if (simulated) {
+                    const interval = document.getElementById('tie-probability-interval');
+                    interval.textContent = 'Tie ' + formatSamplingInterval(data.tie_probability_interval, simulation.confidence_level);
+                    interval.classList.remove('hidden');
                 }
 
-                exactResult.classList.remove('hidden');
-
+                // Changing calculation methods alone is not evidence of a bad move.
+                if (previousWinProbabilityMethod === data.method) {
+                    checkForBigDrop(data.player1.win_probability, data.player2.win_probability);
+                } else {
+                    previousWinProbs = { 1: data.player1.win_probability, 2: data.player2.win_probability };
+                }
+                previousWinProbabilityMethod = data.method;
+                updateLastCalcInfo(data.mode || 'joker', 'win_prob', data.player1.expected_final);
             } catch (error) {
-                console.error('Error calculating exact win probability:', error);
-                exactResultValues.textContent = 'Calculation failed';
-                exactResult.classList.remove('hidden');
+                if (!isCurrent() || (error.name === 'AbortError' && !timedOut)) return;
+                winProbabilityRequestKey = null; // Allow the retry control to repeat this state.
+                const detail = timedOut ? 'The calculation timed out. Please retry.' : error.message;
+                showWinProbabilityStatus('Odds unavailable', detail);
+                document.getElementById('win-prob-retry').classList.remove('hidden');
+                console.error('Error updating win probabilities:', error);
+            } finally {
+                clearTimeout(timeout);
+                if (sequence === winProbabilityRequestSequence) winProbabilityRequestController = null;
             }
-
-            // Remove loading state
-            exactCalcBtn.classList.remove('loading');
-            exactCalcBtn.disabled = false;
         }
 
         // Set active player

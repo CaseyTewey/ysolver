@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Web UI for 2-player Yahtzee solver.
-Run with: python web_app.py
-Then open: http://localhost:5000
+HTTP API and existing web UI for the 2-player Yahtzee solver.
+Run with: python app.py
+Then open: http://localhost:8080
 """
 
 from flask import Flask, render_template, jsonify, request
@@ -10,15 +10,22 @@ import json
 import math
 import os
 import re
+import threading
 from datetime import datetime
+from functools import lru_cache
+from werkzeug.exceptions import HTTPException
+from api_state import InvalidState, integer, validate_dice, parse_scorecard
+from game_storage import load_games, append_game
+from mc_solver import simulate_match
 
 # Game results file path
-GAME_RESULTS_FILE = os.path.join(os.path.dirname(__file__), 'game_results.json')
+GAME_RESULTS_FILE = os.environ.get('GAME_RESULTS_FILE', os.path.join(os.path.dirname(__file__), 'game_results.json'))
 
 # Import solver components
 from ev_solver import (
     get_recommendation, ev_remaining, get_expected_score_fresh_game,
     get_recommendation_joker, ev_remaining_joker, get_expected_score_fresh_game_joker,
+    get_all_category_evs_joker,
     YAHTZEE_UNFILLED, YAHTZEE_SCRATCHED, YAHTZEE_SCORED, YAHTZEE_BONUS
 )
 from dice import dice_list_to_counts, roll_id
@@ -34,6 +41,105 @@ from pmf_solver_joker import (
 )
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024
+MAX_CATS_FOR_EXACT = 4
+SIMULATION_SAMPLES = 10_000
+_exact_slot = threading.BoundedSemaphore(1)
+
+
+class ExactCalculationBusy(Exception):
+    """The shared per-worker probability computation slot is occupied."""
+
+    def __init__(self, method='exact_pmf_joker'):
+        self.method = method
+        super().__init__('The solver is busy; retry shortly')
+
+
+@app.errorhandler(ExactCalculationBusy)
+def exact_calculation_busy(error):
+    return jsonify(error=str(error), method=error.method,
+                   feasible=error.method == 'exact_pmf_joker'), 503, {'Retry-After': '1'}
+
+
+@lru_cache(maxsize=256)
+def _cached_exact_probabilities(p1_locked, p1_mask, p1_upper, p1_status,
+                                p2_locked, p2_mask, p2_upper, p2_status):
+    """Reuse immutable match results for unchanged scorecards within a worker.
+
+    The LRU checks for a completed result before acquiring the compute slot, so
+    cached matches remain available while an unrelated match is calculating.
+    Busy/failed calls raise and are never cached or replaced with an estimate.
+    """
+    if not _exact_slot.acquire(blocking=False):
+        raise ExactCalculationBusy()
+    try:
+        return compute_win_probability_joker_exact(
+            p1_locked, p1_mask, p1_upper, p1_status,
+            p2_locked, p2_mask, p2_upper, p2_status)
+    finally:
+        _exact_slot.release()
+
+
+@lru_cache(maxsize=256)
+def _cached_simulation_probabilities(p1_locked, p1_mask, p1_upper, p1_status,
+                                     p2_locked, p2_mask, p2_upper, p2_status):
+    """Bound repeated work; cached results bypass the shared CPU admission gate.
+
+    Results stay private to this module and are read into fresh response objects.
+    A request cannot reduce the server's sample count or change its confidence.
+    """
+    if not _exact_slot.acquire(blocking=False):
+        raise ExactCalculationBusy('monte_carlo')
+    try:
+        return simulate_match(p1_locked, p1_mask, p1_upper, p1_status,
+                              p2_locked, p2_mask, p2_upper, p2_status,
+                              sample_count=SIMULATION_SAMPLES)
+    finally:
+        _exact_slot.release()
+
+
+def exact_probabilities(p1, p2):
+    if p1.remaining == p2.remaining == 0:
+        return ((1.0, 0.0, 0.0) if p1.current_total > p2.current_total else
+                (0.0, 0.0, 1.0) if p1.current_total < p2.current_total else
+                (0.0, 1.0, 0.0))
+    return _cached_exact_probabilities(
+        p1.locked, p1.mask, min(p1.upper, 63), p1.yahtzee_status,
+        p2.locked, p2.mask, min(p2.upper, 63), p2.yahtzee_status)
+
+
+def request_object():
+    data = request.get_json()
+    if not isinstance(data, dict):
+        raise InvalidState('Request body must be a JSON object')
+    try:
+        json.dumps(data, allow_nan=False)
+    except ValueError:
+        raise InvalidState('JSON numbers must be finite')
+    return data
+
+
+@app.errorhandler(InvalidState)
+def invalid_state(error):
+    return jsonify(error=str(error)), 400
+
+
+@app.errorhandler(HTTPException)
+def http_error(error):
+    if request.path.startswith('/api/'):
+        return jsonify(error=error.description), error.code
+    return error
+
+
+@app.errorhandler(Exception)
+def unexpected_error(error):
+    app.logger.exception('Request failed')
+    return jsonify(error='Internal server error'), 500
+
+
+@app.route('/api/health')
+def health():
+    return jsonify(status='ok', mode='joker', objective='maximize_expected_score')
 
 
 # High-variance categories (bimodal distributions)
@@ -47,7 +153,8 @@ MEDIUM_VARIANCE_CATEGORIES = {
 }
 
 
-def detect_edge_cases(unfilled1, unfilled2, upper1, upper2, ev_diff, cats_remaining):
+def detect_edge_cases(unfilled1, unfilled2, upper1, upper2, ev_diff, cats_remaining,
+                      yahtzee_status1=0, yahtzee_status2=0):
     """
     Detect edge cases where normal approximation may be inaccurate.
 
@@ -55,6 +162,12 @@ def detect_edge_cases(unfilled1, unfilled2, upper1, upper2, ev_diff, cats_remain
         dict with 'has_edge_case', 'reasons', 'suggest_exact'
     """
     reasons = []
+
+    if 0 < cats_remaining <= MAX_CATS_FOR_EXACT:
+        reasons.append('Endgame scores have discrete outcomes; exact calculation is available')
+    if ((unfilled1 and yahtzee_status1 == YAHTZEE_SCORED) or
+            (unfilled2 and yahtzee_status2 == YAHTZEE_SCORED)):
+        reasons.append('A future Yahtzee can add a 100-point bonus')
 
     # Check for high-variance categories
     p1_high_var = unfilled1 & HIGH_VARIANCE_CATEGORIES
@@ -93,14 +206,13 @@ def detect_edge_cases(unfilled1, unfilled2, upper1, upper2, ev_diff, cats_remain
         reasons.append(f"Asymmetric variance (P1: {p1_var_count}, P2: {p2_var_count} high-variance cats)")
 
     has_edge_case = len(reasons) > 0
-    # Only suggest exact if it's feasible (≤5 categories each)
-    suggest_exact = has_edge_case and cats_remaining <= 5
+    suggest_exact = has_edge_case and cats_remaining <= MAX_CATS_FOR_EXACT
 
     return {
         'has_edge_case': has_edge_case,
         'reasons': reasons,
         'suggest_exact': suggest_exact,
-        'exact_feasible': cats_remaining <= 5
+        'exact_feasible': cats_remaining <= MAX_CATS_FOR_EXACT
     }
 
 
@@ -150,7 +262,7 @@ def compute_max_remaining(unfilled_categories, current_upper_score,
             max_upper_remaining += MAX_CATEGORY_SCORES[cat]
 
     # Check if upper bonus is still achievable
-    if current_upper_score + max_upper_remaining >= 63:
+    if current_upper_score < 63 <= current_upper_score + max_upper_remaining:
         # Could still get the bonus (35 points)
         max_remaining += 35
 
@@ -160,6 +272,9 @@ def compute_max_remaining(unfilled_categories, current_upper_score,
         num_remaining_turns = len(unfilled_categories)
         # Theoretically could get a joker bonus on every remaining turn
         max_remaining += num_remaining_turns * YAHTZEE_BONUS
+    elif is_joker_mode and yahtzee_status == YAHTZEE_UNFILLED and 11 in unfilled_categories:
+        # Scoring the first Yahtzee can unlock +100 on every later turn.
+        max_remaining += max(0, len(unfilled_categories) - 1) * YAHTZEE_BONUS
 
     return max_remaining
 
@@ -176,6 +291,10 @@ def compute_win_probability(score1, ev1, cats_remaining1, score2, ev2, cats_rema
 
     Only returns 0.0% if player is mathematically eliminated (max possible < opponent's current).
     """
+    if cats_remaining1 == cats_remaining2 == 0:
+        return ((1.0, 0.0, 0.0) if score1 > score2 else
+                (0.0, 0.0, 1.0) if score1 < score2 else (0.0, 1.0, 0.0))
+
     # Check for mathematical elimination first
     if unfilled1 is not None and unfilled2 is not None:
         max1 = score1 + compute_max_remaining(unfilled1, upper1, is_joker_mode, yahtzee_status1)
@@ -198,8 +317,8 @@ def compute_win_probability(score1, ev1, cats_remaining1, score2, ev2, cats_rema
 
     # Total std deviation (decreases as game progresses)
     # Using sqrt because variances add, not std devs
-    std1 = std_per_cat * math.sqrt(max(cats_remaining1, 0.1))
-    std2 = std_per_cat * math.sqrt(max(cats_remaining2, 0.1))
+    std1 = std_per_cat * math.sqrt(cats_remaining1)
+    std2 = std_per_cat * math.sqrt(cats_remaining2)
 
     # Combined std deviation for the difference
     combined_std = math.sqrt(std1**2 + std2**2)
@@ -211,7 +330,7 @@ def compute_win_probability(score1, ev1, cats_remaining1, score2, ev2, cats_rema
         elif expected1 < expected2:
             return 0.0, 0.0, 1.0
         else:
-            return 0.5, 0.0, 0.5
+            return 0.0, 1.0, 0.0
 
     # P(Player1 wins) = P(Score1 > Score2) = P(Score1 - Score2 > 0)
     # Score1 - Score2 ~ Normal(expected1 - expected2, combined_std)
@@ -228,10 +347,10 @@ def compute_win_probability(score1, ev1, cats_remaining1, score2, ev2, cats_rema
     # Ensure we don't show 0.0% unless truly eliminated (handled above)
     # Use a minimum probability floor for display
     MIN_PROB = 0.001  # 0.1%
-    if p1_win < MIN_PROB and p1_win > 0:
+    if p1_win < MIN_PROB:
         p1_win = MIN_PROB
         p2_win = 1.0 - MIN_PROB
-    elif p2_win < MIN_PROB and p2_win > 0:
+    elif p2_win < MIN_PROB:
         p2_win = MIN_PROB
         p1_win = 1.0 - MIN_PROB
 
@@ -273,26 +392,14 @@ def index():
 @app.route('/api/recommend', methods=['POST'])
 def recommend():
     """Get recommendation for current game state."""
-    data = request.json
-
-    dice = data.get('dice', [1, 1, 1, 1, 1])
-    rolls_remaining = data.get('rolls_remaining', 2)
-    player_scores = data.get('scores', {})
-
-    # Joker mode parameters (joker mode is now the only mode)
-    yahtzee_status = data.get('yahtzee_status', YAHTZEE_UNFILLED)
-    yahtzee_bonuses = data.get('yahtzee_bonuses', 0)
-
-    # Compute mask and upper from scores - filter out invalid keys
-    filled = []
-    for k, v in player_scores.items():
-        if v is not None and k not in ('undefined', 'null', ''):
-            try:
-                filled.append(int(k))
-            except ValueError:
-                pass  # Skip invalid keys
-    mask = compute_mask(filled)
-    upper = compute_upper_total(player_scores)
+    data = request_object()
+    dice = validate_dice(data.get('dice'))
+    rolls_remaining = integer(data.get('rolls_remaining', 2), 'rolls_remaining', 0, 2)
+    state = parse_scorecard(data)
+    if state.remaining == 0:
+        return jsonify(error='The scorecard is complete; there is no legal action'), 409
+    mask, upper = state.mask, min(state.upper, 63)
+    yahtzee_status, yahtzee_bonuses = state.yahtzee_status, state.yahtzee_bonuses
 
     # Always use joker mode
     rec = get_recommendation_joker(dice, mask, upper, rolls_remaining, yahtzee_status)
@@ -305,8 +412,9 @@ def recommend():
         'mask': mask,
         'upper': upper,
         'action': rec['action'],
-        'expected_value': round(rec['expected_value'], 2),
+        'expected_value': round(rec['expected_value'] - state.upper_bonus, 2),
         'mode': 'joker',
+        'objective': 'maximize_expected_score',
         'yahtzee_status': yahtzee_status,
         'yahtzee_bonuses': yahtzee_bonuses,
         'is_yahtzee_roll': bool(rec.get('is_yahtzee_roll', False)),
@@ -342,10 +450,10 @@ def recommend():
             'category': int(opt['category']),
             'name': opt['name'],
             'points': int(opt['points']),
-            'expected_value': float(opt['expected_value']),
+            'expected_value': float(opt['expected_value']) - state.upper_bonus,
             'is_forced': bool(opt.get('is_forced', False)),
         }
-        for opt in rec['category_options'][:8]  # Top 8
+        for opt in rec['category_options']
     ]
 
     return jsonify(response)
@@ -353,45 +461,48 @@ def recommend():
 
 @app.route('/api/score_options', methods=['POST'])
 def score_options():
-    """Get scoring options for current dice."""
-    data = request.json
-    dice = data.get('dice', [1, 1, 1, 1, 1])
+    """Get legal scoring options under the same Joker rules as recommendations."""
+    data = request_object()
+    dice = validate_dice(data.get('dice'))
+    state = parse_scorecard(data)
+    if state.remaining == 0:
+        return jsonify(options=[], mode='joker', joker_bonus=0)
 
     counts = dice_list_to_counts(dice)
     rid = roll_id(counts)
 
     options = []
-    for cat in range(NUM_CATEGORIES):
-        pts = SCORE_TABLE[rid][cat]
+    for cat, pts, _, is_forced in get_all_category_evs_joker(
+            rid, state.mask, min(state.upper, 63), state.yahtzee_status):
         options.append({
-            'category': cat,
+            'category': int(cat),
             'name': CATEGORY_NAMES[cat],
-            'points': pts
+            'points': int(pts),
+            'is_forced': bool(is_forced),
         })
 
-    return jsonify({'options': options})
+    return jsonify(options=options, mode='joker',
+                   joker_bonus=100 if is_yahtzee_roll(rid) and state.yahtzee_status == YAHTZEE_SCORED and state.remaining else 0)
 
 
 @app.route('/api/game_ev', methods=['POST'])
 def game_ev():
     """Get expected remaining value for a game state (always joker mode)."""
-    data = request.json
-    player_scores = data.get('scores', {})
-    yahtzee_status = data.get('yahtzee_status', YAHTZEE_UNFILLED)
-
-    filled = [int(k) for k, v in player_scores.items() if v is not None]
-    mask = compute_mask(filled)
-    upper = compute_upper_total(player_scores)
+    state = parse_scorecard(request_object())
+    mask, upper = state.mask, min(state.upper, 63)
+    yahtzee_status = state.yahtzee_status
 
     # Always use joker mode
-    ev = ev_remaining_joker(mask, upper, yahtzee_status)
+    ev = ev_remaining_joker(mask, upper, yahtzee_status) - state.upper_bonus
 
     response = {
         'ev_remaining': round(ev, 2),
         'mask': mask,
         'upper': upper,
-        'categories_filled': len(filled),
-        'categories_remaining': 13 - len(filled),
+        'categories_filled': 13 - state.remaining,
+        'categories_remaining': state.remaining,
+        'current_score': state.current_total,
+        'expected_final': round(state.current_total + ev, 2),
         'mode': 'joker',
         'yahtzee_status': yahtzee_status,
     }
@@ -414,246 +525,117 @@ def get_available_modes():
     })
 
 
+def probability_response(p1, p2, *, require_exact=False):
+    """Select the supported calculation and keep a consistent response shape."""
+    remaining = max(p1.remaining, p2.remaining)
+    feasible = remaining <= MAX_CATS_FOR_EXACT
+    if require_exact and not feasible:
+        return jsonify(error=f'Too many categories remaining for exact calculation. Max: {MAX_CATS_FOR_EXACT}',
+                       feasible=False, max_categories=MAX_CATS_FOR_EXACT), 400
+
+    ev1 = ev_remaining_joker(p1.mask, min(p1.upper, 63), p1.yahtzee_status) - p1.upper_bonus
+    ev2 = ev_remaining_joker(p2.mask, min(p2.upper, 63), p2.yahtzee_status) - p2.upper_bonus
+    simulation = None
+    if feasible:
+        win1, tie, win2 = exact_probabilities(p1, p2)
+        method = 'deterministic' if remaining == 0 else 'exact_pmf_joker'
+        metadata = dict(has_edge_case=False, reasons=[], suggest_exact=False, warning=None)
+        intervals = [[round(probability * 100, 2)] * 2 for probability in (win1, tie, win2)]
+        displays = [f'{round(probability * 100, 2):g}%' for probability in (win1, tie, win2)]
+    else:
+        result = _cached_simulation_probabilities(
+            p1.locked, p1.mask, min(p1.upper, 63), p1.yahtzee_status,
+            p2.locked, p2.mask, min(p2.upper, 63), p2.yahtzee_status)
+        win1, tie, win2 = result['probabilities']
+        method = 'monte_carlo'
+        # Round outward so UI formatting never narrows the calculated interval.
+        intervals = [[max(0, math.floor(low * 10_000) / 100),
+                      min(100, math.ceil(high * 10_000) / 100)]
+                     for low, high in result['intervals']]
+
+        def sampled_display(count):
+            percent = 100 * count / result['sample_count']
+            if percent < 0.1:
+                return '<0.1%'
+            if percent > 99.9:
+                return '>99.9%'
+            return f'~{round(percent, 1):g}%'
+
+        displays = [sampled_display(count) for count in result['counts']]
+        outcome_keys = ('player1', 'tie', 'player2')
+        simulation = dict(
+            sample_count=result['sample_count'], confidence_level=result['confidence_level'],
+            target_margin_percentage_points=1.0,
+            max_margin_percentage_points=result['max_margin_percentage_points'],
+            intervals=dict(zip(outcome_keys, intervals)),
+            counts=dict(zip(outcome_keys, result['counts'])))
+        metadata = dict(has_edge_case=False, reasons=[], suggest_exact=False,
+                        warning=('95% intervals describe sampling uncertainty for each outcome under '
+                                 'score-optimal play, not a guarantee of perfect match strategy. '
+                                 'Exact odds are used automatically when each player has four or fewer categories left.'))
+    metadata.update(method=method, is_approximate=not feasible, exact_feasible=feasible,
+                    max_categories_for_exact=MAX_CATS_FOR_EXACT, distribution_basis='start_of_turn')
+
+    def player_result(state, ev, win, index):
+        return dict(current_score=state.current_total, ev_remaining=round(ev, 2),
+                    expected_final=round(state.current_total + ev, 2),
+                    categories_remaining=state.remaining, win_probability=round(win * 100, 2),
+                    win_probability_display=displays[index], win_probability_interval=intervals[index],
+                    yahtzee_status=state.yahtzee_status, yahtzee_bonuses=state.yahtzee_bonuses,
+                    bonus_points=state.yahtzee_bonuses * YAHTZEE_BONUS)
+
+    return jsonify(player1=player_result(p1, ev1, win1, 0), player2=player_result(p2, ev2, win2, 2),
+                   tie_probability=round(tie * 100, 2), tie_probability_display=displays[1],
+                   tie_probability_interval=intervals[1], simulation=simulation,
+                   mode='joker', approximation=metadata,
+                   method=method, is_exact=feasible, feasible=feasible,
+                   objective='maximize_expected_score', distribution_basis='start_of_turn')
+
+
 @app.route('/api/win_probability', methods=['POST'])
 def win_probability():
-    """Compute win probability for both players based on current game state (always joker mode)."""
-    data = request.json
-
-    p1_scores = data.get('player1_scores', {})
-    p2_scores = data.get('player2_scores', {})
-
-    # Joker mode parameters (joker mode is now the only mode)
-    p1_yahtzee_status = data.get('player1_yahtzee_status', YAHTZEE_UNFILLED)
-    p2_yahtzee_status = data.get('player2_yahtzee_status', YAHTZEE_UNFILLED)
-    p1_yahtzee_bonuses = data.get('player1_yahtzee_bonuses', 0)
-    p2_yahtzee_bonuses = data.get('player2_yahtzee_bonuses', 0)
-
-    # Compute current totals
-    def get_current_total(scores):
-        total = 0
-        upper = 0
-        for cat, pts in scores.items():
-            if pts is not None:
-                total += pts
-                if int(cat) < 6:
-                    upper += pts
-        # Add bonus if earned
-        if upper >= 63:
-            total += 35
-        return total, upper
-
-    p1_total, p1_upper = get_current_total(p1_scores)
-    p2_total, p2_upper = get_current_total(p2_scores)
-
-    # Compute EV remaining for each player
-    p1_filled = [int(k) for k, v in p1_scores.items() if v is not None]
-    p2_filled = [int(k) for k, v in p2_scores.items() if v is not None]
-
-    p1_mask = compute_mask(p1_filled)
-    p2_mask = compute_mask(p2_filled)
-
-    # Clamp upper for bonus calculation
-    p1_upper_clamped = min(p1_upper, 63)
-    p2_upper_clamped = min(p2_upper, 63)
-
-    # Always use joker mode
-    p1_ev = ev_remaining_joker(p1_mask, p1_upper_clamped, p1_yahtzee_status)
-    p2_ev = ev_remaining_joker(p2_mask, p2_upper_clamped, p2_yahtzee_status)
-
-    # Categories remaining
-    p1_remaining = 13 - len(p1_filled)
-    p2_remaining = 13 - len(p2_filled)
-
-    # Unfilled categories (for elimination check)
-    all_cats = set(range(13))
-    p1_unfilled = all_cats - set(p1_filled)
-    p2_unfilled = all_cats - set(p2_filled)
-
-    # Compute win probability with elimination check (always joker mode)
-    p1_win, tie, p2_win = compute_win_probability(
-        p1_total, p1_ev, p1_remaining,
-        p2_total, p2_ev, p2_remaining,
-        unfilled1=p1_unfilled, unfilled2=p2_unfilled,
-        upper1=p1_upper, upper2=p2_upper,
-        is_joker_mode=True,
-        yahtzee_status1=p1_yahtzee_status,
-        yahtzee_status2=p2_yahtzee_status
-    )
-
-    # Detect edge cases
-    ev_diff = (p1_total + p1_ev) - (p2_total + p2_ev)
-    max_remaining = max(p1_remaining, p2_remaining)
-    edge_case_info = detect_edge_cases(
-        p1_unfilled, p2_unfilled,
-        p1_upper, p2_upper,
-        ev_diff, max_remaining
-    )
-
-    # Include joker bonuses in totals
-    p1_total_with_bonus = p1_total + p1_yahtzee_bonuses * YAHTZEE_BONUS
-    p2_total_with_bonus = p2_total + p2_yahtzee_bonuses * YAHTZEE_BONUS
-
-    response = {
-        'player1': {
-            'current_score': p1_total_with_bonus,
-            'ev_remaining': round(p1_ev, 2),
-            'expected_final': round(p1_total_with_bonus + p1_ev, 2),
-            'categories_remaining': p1_remaining,
-            'win_probability': round(p1_win * 100, 1),
-            'yahtzee_status': p1_yahtzee_status,
-            'yahtzee_bonuses': p1_yahtzee_bonuses,
-            'bonus_points': p1_yahtzee_bonuses * YAHTZEE_BONUS,
-        },
-        'player2': {
-            'current_score': p2_total_with_bonus,
-            'ev_remaining': round(p2_ev, 2),
-            'expected_final': round(p2_total_with_bonus + p2_ev, 2),
-            'categories_remaining': p2_remaining,
-            'win_probability': round(p2_win * 100, 1),
-            'yahtzee_status': p2_yahtzee_status,
-            'yahtzee_bonuses': p2_yahtzee_bonuses,
-            'bonus_points': p2_yahtzee_bonuses * YAHTZEE_BONUS,
-        },
-        'tie_probability': round(tie * 100, 1),
-        'mode': 'joker',
-        'approximation': {
-            'method': 'normal',
-            'has_edge_case': edge_case_info['has_edge_case'],
-            'reasons': edge_case_info['reasons'],
-            'suggest_exact': edge_case_info['suggest_exact'],
-            'exact_feasible': edge_case_info['exact_feasible']
-        }
-    }
-
-    return jsonify(response)
+    """Automatically use exact endgame odds; clearly mark early-game estimates."""
+    data = request_object()
+    return probability_response(parse_scorecard(data, 'player1_'), parse_scorecard(data, 'player2_'))
 
 
 @app.route('/api/win_probability_exact', methods=['POST'])
 def win_probability_exact():
-    """
-    Compute EXACT win probability using PMF convolution.
-
-    WARNING: This is slow! Only use when ≤5 categories remaining per player.
-    Returns error if too many categories remaining.
-
-    Uses joker PMF solver for joker mode (models yahtzee_status and joker bonuses).
-    Uses traditional PMF solver for traditional mode.
-    """
-    data = request.json
-
-    p1_scores = data.get('player1_scores', {})
-    p2_scores = data.get('player2_scores', {})
-
-    # Joker mode parameters (joker mode is now the only mode)
-    p1_yahtzee_bonuses = data.get('player1_yahtzee_bonuses', 0)
-    p2_yahtzee_bonuses = data.get('player2_yahtzee_bonuses', 0)
-    p1_yahtzee_status = data.get('player1_yahtzee_status', YAHTZEE_UNFILLED)
-    p2_yahtzee_status = data.get('player2_yahtzee_status', YAHTZEE_UNFILLED)
-
-    # Compute current totals and state
-    def get_state(scores):
-        total = 0
-        upper = 0
-        filled = []
-        for cat, pts in scores.items():
-            if pts is not None:
-                total += pts
-                filled.append(int(cat))
-                if int(cat) < 6:
-                    upper += pts
-        # Add bonus if earned
-        if upper >= 63:
-            total += 35
-        mask = sum(1 << c for c in filled)
-        return total, upper, mask, filled
-
-    p1_total, p1_upper, p1_mask, p1_filled = get_state(p1_scores)
-    p2_total, p2_upper, p2_mask, p2_filled = get_state(p2_scores)
-
-    # Add joker bonuses to current totals (always joker mode)
-    p1_total += p1_yahtzee_bonuses * YAHTZEE_BONUS
-    p2_total += p2_yahtzee_bonuses * YAHTZEE_BONUS
-
-    p1_remaining = 13 - len(p1_filled)
-    p2_remaining = 13 - len(p2_filled)
-
-    # Check if computation is feasible (2-3 cats: ~10s, 4 cats: ~30s)
-    MAX_CATS_FOR_EXACT = 4
-    if p1_remaining > MAX_CATS_FOR_EXACT or p2_remaining > MAX_CATS_FOR_EXACT:
-        return jsonify({
-            'error': f'Too many categories remaining for exact calculation. Max: {MAX_CATS_FOR_EXACT}, P1: {p1_remaining}, P2: {p2_remaining}',
-            'feasible': False
-        }), 400
-
-    try:
-        # Always use joker PMF solver (models yahtzee_status and future joker bonuses)
-        clear_pmf_joker_cache()
-        p1_win, tie_prob, p2_win = compute_win_probability_joker_exact(
-            p1_locked=p1_total, p1_mask=p1_mask, p1_upper=min(p1_upper, 63), p1_yahtzee_status=p1_yahtzee_status,
-            p2_locked=p2_total, p2_mask=p2_mask, p2_upper=min(p2_upper, 63), p2_yahtzee_status=p2_yahtzee_status
-        )
-
-        return jsonify({
-            'player1': {
-                'current_score': p1_total,
-                'categories_remaining': p1_remaining,
-                'win_probability': round(p1_win * 100, 2)
-            },
-            'player2': {
-                'current_score': p2_total,
-                'categories_remaining': p2_remaining,
-                'win_probability': round(p2_win * 100, 2)
-            },
-            'tie_probability': round(tie_prob * 100, 2),
-            'method': 'exact_pmf_joker',
-            'feasible': True
-        })
-    except Exception as e:
-        return jsonify({
-            'error': f'PMF computation failed: {str(e)}',
-            'feasible': False
-        }), 500
+    """Explicit exact-only compatibility endpoint, using the shared result cache."""
+    data = request_object()
+    return probability_response(parse_scorecard(data, 'player1_'), parse_scorecard(data, 'player2_'),
+                                require_exact=True)
 
 
 def load_game_results():
-    """Load game results from file."""
-    if os.path.exists(GAME_RESULTS_FILE):
-        try:
-            with open(GAME_RESULTS_FILE, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return []
-    return []
-
-
-def save_game_results(results):
-    """Save game results to file."""
-    with open(GAME_RESULTS_FILE, 'w') as f:
-        json.dump(results, f, indent=2)
+    return load_games(GAME_RESULTS_FILE)
 
 
 @app.route('/api/save_game', methods=['POST'])
 def save_game():
-    """Save a completed game to the results file."""
-    data = request.json
-
-    # Load existing results
-    results = load_game_results()
-
-    # Add game ID
-    data['game_id'] = len(results) + 1
-
-    # Append new game
-    results.append(data)
-
-    # Save back to file
-    save_game_results(results)
-
-    return jsonify({
-        'success': True,
-        'game_id': data['game_id'],
-        'total_games': len(results)
-    })
+    """Validate a completed game and atomically append an authoritative summary."""
+    data = request_object()
+    p1 = parse_scorecard(data, 'player1_')
+    p2 = parse_scorecard(data, 'player2_')
+    if p1.remaining or p2.remaining:
+        raise InvalidState('Both scorecards must be complete before saving a game')
+    turns = data.get('turns', [])
+    if not isinstance(turns, list) or len(turns) > 26 or any(not isinstance(turn, dict) for turn in turns):
+        raise InvalidState('turns must be a list of at most 26 turn objects')
+    if not isinstance(data.get('stats', {}), dict):
+        raise InvalidState('stats must be an object')
+    if not isinstance(data.get('timestamp', ''), str) or len(data.get('timestamp', '')) > 100:
+        raise InvalidState('timestamp must be a string of at most 100 characters')
+    saved = dict(data, player1_score=p1.current_total, player2_score=p2.current_total,
+                 winner=1 if p1.current_total > p2.current_total else 2 if p2.current_total > p1.current_total else 0,
+                 mode='joker', player1_yahtzee_status=p1.yahtzee_status, player2_yahtzee_status=p2.yahtzee_status,
+                 player1_yahtzee_bonuses=p1.yahtzee_bonuses, player2_yahtzee_bonuses=p2.yahtzee_bonuses)
+    try:
+        game_id, total_games = append_game(GAME_RESULTS_FILE, saved)
+    except (OSError, ValueError):
+        app.logger.exception('Unable to save game history')
+        return jsonify(error='Unable to save game history'), 500
+    return jsonify(success=True, game_id=game_id, total_games=total_games)
 
 
 @app.route('/api/game_history', methods=['GET'])
@@ -844,4 +826,4 @@ if __name__ == '__main__':
     print("=" * 50)
     print("Open http://localhost:8080 in your browser")
     print("=" * 50 + "\n")
-    app.run(debug=True, host='127.0.0.1', port=8080)
+    app.run(debug=os.environ.get('FLASK_DEBUG') == '1', host='127.0.0.1', port=8080)

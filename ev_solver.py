@@ -10,6 +10,7 @@ Uses precomputed tables from precompute_fast.py for instant lookups.
 
 from typing import Dict, Tuple, Optional, List
 from functools import lru_cache
+from numbers import Integral
 import numpy as np
 from numba import njit
 from dice import Counts, enumerate_rolls, roll_id, id_to_roll
@@ -17,7 +18,7 @@ from scoring import (
     score, get_score_table, NUM_CATEGORIES, UPPER_BONUS,
     UPPER_BONUS_THRESHOLD, is_upper_category, get_legal_categories,
     CATEGORY_NAMES, is_yahtzee_roll, get_yahtzee_face,
-    get_forced_category_joker, get_joker_score_table_cached,
+    get_forced_category_joker, get_legal_categories_joker, get_joker_score_table_cached,
     get_yahtzee_detection_arrays, Category
 )
 from transitions import (
@@ -36,6 +37,7 @@ YAHTZEE_SCORED = 2     # Yahtzee filled with 50 (eligible for bonuses)
 YAHTZEE_BONUS = 100    # Bonus points for each additional Yahtzee
 YAHTZEE_CATEGORY = 11  # Category index for Yahtzee
 NUM_YAHTZEE_STATUS = 3 # Number of yahtzee status values
+LOWER_MASK = FULL_MASK ^ ((1 << 6) - 1)
 
 # Precomputed tables (loaded from cache)
 _TABLES = None
@@ -46,8 +48,40 @@ _SCORE_TABLE: List[List[int]] = None
 _JOKER_TABLES = None
 _JOKER_SCORE_TABLE = None
 
-# Runtime cache for joker v1/v2/v3 arrays by (mask, upper, yahtzee_status)
-_v_cache_joker = {}
+def validate_solver_state(mask, upper, yahtzee_status=None, *, require_open=False):
+    """Reject invalid states before they can become NumPy array indices."""
+    if isinstance(mask, bool) or not isinstance(mask, Integral) or not 0 <= mask <= FULL_MASK:
+        raise ValueError("mask must be an integer from 0 to 8191")
+    if isinstance(upper, bool) or not isinstance(upper, Integral) or upper < 0:
+        raise ValueError("upper must be a nonnegative integer")
+    if require_open and mask == FULL_MASK:
+        raise ValueError("The scorecard is complete; no turn remains")
+    if yahtzee_status is not None:
+        if (isinstance(yahtzee_status, bool) or not isinstance(yahtzee_status, Integral)
+                or yahtzee_status not in (0, 1, 2)):
+            raise ValueError("yahtzee_status must be 0, 1, or 2")
+        if bool(mask & (1 << YAHTZEE_CATEGORY)) != (yahtzee_status != YAHTZEE_UNFILLED):
+            raise ValueError("yahtzee_status must agree with the filled Yahtzee box")
+
+
+def validate_recommendation_inputs(dice, mask, upper, rolls_remaining,
+                                   yahtzee_status=None):
+    """Validate public recommendation inputs before loading solver tables."""
+    from dice import dice_list_to_counts
+    validate_solver_state(mask, upper, yahtzee_status, require_open=True)
+    if not isinstance(dice, (list, tuple)) or len(dice) != 5:
+        raise ValueError("Exactly five dice are required")
+    dice_list_to_counts(dice)
+    if (isinstance(rolls_remaining, bool) or not isinstance(rolls_remaining, Integral)
+            or rolls_remaining not in (0, 1, 2)):
+        raise ValueError("rolls_remaining must be 0, 1, or 2")
+
+
+def _validate_roll_state(roll_idx, mask, upper, yahtzee_status=None):
+    validate_solver_state(mask, upper, yahtzee_status, require_open=True)
+    if (isinstance(roll_idx, bool) or not isinstance(roll_idx, Integral)
+            or not 0 <= roll_idx < NUM_ROLLS):
+        raise ValueError("roll_idx must be an integer from 0 to 251")
 
 
 def _load_tables():
@@ -207,13 +241,15 @@ def _compute_v3_joker_all_rolls(mask, upper, yahtzee_status, score_table, joker_
     for rid in range(NUM_ROLLS):
         is_ytz = is_yahtzee[rid]
         ytz_face = yahtzee_face[rid]
+        joker_active = is_ytz and yahtzee_status != YAHTZEE_UNFILLED
+        lower_available = (mask & LOWER_MASK) != LOWER_MASK
 
         # Joker bonus if rolling another yahtzee after scoring 50
         joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
 
-        # Check forced category (only when eligible for joker bonus)
+        # A filled Yahtzee box forces placement even if it was scratched.
         forced_cat = -1
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED and ytz_face >= 0:
+        if is_ytz and yahtzee_status != YAHTZEE_UNFILLED and ytz_face >= 0:
             upper_cat = ytz_face
             if not (mask & (1 << upper_cat)):
                 forced_cat = upper_cat
@@ -226,9 +262,11 @@ def _compute_v3_joker_all_rolls(mask, upper, yahtzee_status, score_table, joker_
             # Skip if forced to different category
             if forced_cat >= 0 and cat != forced_cat:
                 continue
+            if joker_active and forced_cat < 0 and lower_available and cat < 6:
+                continue
 
             # Get score using appropriate table
-            if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+            if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
                 pts = joker_score_table[rid, cat]
             else:
                 pts = score_table[rid, cat]
@@ -252,45 +290,41 @@ def _compute_v3_joker_all_rolls(mask, upper, yahtzee_status, score_table, joker_
     return v3_arr
 
 
-# Cache for v1/v2/v3 arrays by (mask, upper)
-_v_cache = {}
-
+# At most 12 MB of roll-value arrays per mode per worker.
+@lru_cache(maxsize=2048)
 def _get_v_arrays(mask: int, upper: int):
     """Get cached v1, v2, v3 arrays for a (mask, upper) state."""
     upper = min(upper, MAX_UPPER)
-    key = (mask, upper)
 
-    if key not in _v_cache:
-        tables = _load_tables()
-        trans = _load_transitions()
+    tables = _load_tables()
+    trans = _load_transitions()
 
-        v3_arr = _compute_v3_all_rolls(
-            mask, upper,
-            tables['score_table'],
-            tables['ev_remaining']
-        )
-        v2_arr = _compute_v2_all_rolls(
-            v3_arr,
-            trans['num_keeps'],
-            trans['trans_starts'],
-            trans['trans_ends'],
-            trans['trans_next'],
-            trans['trans_prob']
-        )
-        v1_arr = _compute_v1_all_rolls(
-            v2_arr,
-            trans['num_keeps'],
-            trans['trans_starts'],
-            trans['trans_ends'],
-            trans['trans_next'],
-            trans['trans_prob']
-        )
+    v3_arr = _compute_v3_all_rolls(
+        mask, upper,
+        tables['score_table'],
+        tables['ev_remaining']
+    )
+    v2_arr = _compute_v2_all_rolls(
+        v3_arr,
+        trans['num_keeps'],
+        trans['trans_starts'],
+        trans['trans_ends'],
+        trans['trans_next'],
+        trans['trans_prob']
+    )
+    v1_arr = _compute_v1_all_rolls(
+        v2_arr,
+        trans['num_keeps'],
+        trans['trans_starts'],
+        trans['trans_ends'],
+        trans['trans_next'],
+        trans['trans_prob']
+    )
 
-        _v_cache[key] = (v1_arr, v2_arr, v3_arr)
-
-    return _v_cache[key]
+    return v1_arr, v2_arr, v3_arr
 
 
+@lru_cache(maxsize=2048)
 def _get_v_arrays_joker(mask: int, upper: int, yahtzee_status: int):
     """
     Get cached v1, v2, v3 arrays for a (mask, upper, yahtzee_status) joker state.
@@ -299,45 +333,41 @@ def _get_v_arrays_joker(mask: int, upper: int, yahtzee_status: int):
     for a given state computes the arrays (~1-2ms), subsequent calls are instant.
     """
     upper = min(upper, MAX_UPPER)
-    key = (mask, upper, yahtzee_status)
 
-    if key not in _v_cache_joker:
-        tables = _load_joker_tables()
-        trans = _load_transitions()
+    tables = _load_joker_tables()
+    trans = _load_transitions()
 
-        v3_arr = _compute_v3_joker_all_rolls(
-            mask, upper, yahtzee_status,
-            tables['score_table'],
-            tables['joker_score_table'],
-            tables['ev_remaining'],
-            tables['is_yahtzee'],
-            tables['yahtzee_face']
-        )
-        v2_arr = _compute_v2_all_rolls(
-            v3_arr,
-            trans['num_keeps'],
-            trans['trans_starts'],
-            trans['trans_ends'],
-            trans['trans_next'],
-            trans['trans_prob']
-        )
-        v1_arr = _compute_v1_all_rolls(
-            v2_arr,
-            trans['num_keeps'],
-            trans['trans_starts'],
-            trans['trans_ends'],
-            trans['trans_next'],
-            trans['trans_prob']
-        )
+    v3_arr = _compute_v3_joker_all_rolls(
+        mask, upper, yahtzee_status,
+        tables['score_table'],
+        tables['joker_score_table'],
+        tables['ev_remaining'],
+        tables['is_yahtzee'],
+        tables['yahtzee_face']
+    )
+    v2_arr = _compute_v2_all_rolls(
+        v3_arr,
+        trans['num_keeps'],
+        trans['trans_starts'],
+        trans['trans_ends'],
+        trans['trans_next'],
+        trans['trans_prob']
+    )
+    v1_arr = _compute_v1_all_rolls(
+        v2_arr,
+        trans['num_keeps'],
+        trans['trans_starts'],
+        trans['trans_ends'],
+        trans['trans_next'],
+        trans['trans_prob']
+    )
 
-        _v_cache_joker[key] = (v1_arr, v2_arr, v3_arr)
-
-    return _v_cache_joker[key]
+    return v1_arr, v2_arr, v3_arr
 
 
 def clamp_upper(upper: int) -> int:
     """Clamp upper subtotal to [0, 63] since we only care about bonus threshold."""
-    return min(upper, MAX_UPPER)
+    return max(0, min(upper, MAX_UPPER))
 
 
 def get_upper_contribution(cat: int, roll_idx: int) -> int:
@@ -362,6 +392,7 @@ def ev_remaining(mask: int, upper: int) -> float:
     Returns:
         Expected additional points under optimal play
     """
+    validate_solver_state(mask, upper)
     tables = _load_tables()
     upper = min(upper, MAX_UPPER)
     return float(tables['ev_remaining'][mask, upper])
@@ -369,18 +400,24 @@ def ev_remaining(mask: int, upper: int) -> float:
 
 def v3(roll_idx: int, mask: int, upper: int) -> float:
     """Best expected value after roll 3, must choose a category."""
+    _validate_roll_state(roll_idx, mask, upper)
+    upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays(mask, upper)
     return float(v3_arr[roll_idx])
 
 
 def v2(roll_idx: int, mask: int, upper: int) -> float:
     """Best expected value after roll 2, before choosing what to keep."""
+    _validate_roll_state(roll_idx, mask, upper)
+    upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays(mask, upper)
     return float(v2_arr[roll_idx])
 
 
 def v1(roll_idx: int, mask: int, upper: int) -> float:
     """Best expected value after roll 1, before choosing what to keep."""
+    _validate_roll_state(roll_idx, mask, upper)
+    upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays(mask, upper)
     return float(v1_arr[roll_idx])
 
@@ -391,6 +428,7 @@ def v1(roll_idx: int, mask: int, upper: int) -> float:
 
 def best_keep_roll1(roll_idx: int, mask: int, upper: int) -> Counts:
     """Get optimal keep decision after roll 1."""
+    _validate_roll_state(roll_idx, mask, upper)
     upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays(mask, upper)
     trans = _load_transitions()
@@ -411,6 +449,7 @@ def best_keep_roll1(roll_idx: int, mask: int, upper: int) -> Counts:
 
 def best_keep_roll2(roll_idx: int, mask: int, upper: int) -> Counts:
     """Get optimal keep decision after roll 2."""
+    _validate_roll_state(roll_idx, mask, upper)
     upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays(mask, upper)
     trans = _load_transitions()
@@ -436,6 +475,8 @@ def best_category(roll_idx: int, mask: int, upper: int) -> Tuple[int, float]:
     Returns:
         (category_index, expected_value_including_future)
     """
+    _validate_roll_state(roll_idx, mask, upper)
+    upper = min(upper, MAX_UPPER)
     score_table = _get_score_table()
     legal_cats = get_legal_categories(mask)
 
@@ -466,6 +507,8 @@ def get_all_category_evs(roll_idx: int, mask: int, upper: int) -> List[Tuple[int
     Returns:
         List of (category, immediate_points, total_expected_value) sorted by EV
     """
+    _validate_roll_state(roll_idx, mask, upper)
+    upper = min(upper, MAX_UPPER)
     score_table = _get_score_table()
     legal_cats = get_legal_categories(mask)
 
@@ -506,6 +549,7 @@ def get_recommendation(dice: List[int], mask: int, upper: int,
     """
     from dice import dice_list_to_counts, counts_to_dice_list
 
+    validate_recommendation_inputs(dice, mask, upper, rolls_remaining)
     counts = dice_list_to_counts(dice)
     roll_idx = roll_id(counts)
     score_table = _get_score_table()
@@ -590,18 +634,21 @@ def _load_joker_tables():
     """Load precomputed joker mode tables from cache."""
     global _JOKER_TABLES, _JOKER_SCORE_TABLE
     if _JOKER_TABLES is None:
-        import pickle
-        from pathlib import Path
+        from precompute_joker import load_cache, CACHE_FILE, CACHE_VERSION
 
-        cache_path = Path(__file__).parent / "ev_cache_joker.pkl"
+        cache_path = CACHE_FILE
         if not cache_path.exists():
             raise RuntimeError(
                 f"Joker cache not found at {cache_path}. "
                 "Run 'python precompute_joker.py' to generate it."
             )
 
-        with open(cache_path, 'rb') as f:
-            _JOKER_TABLES = pickle.load(f)
+        _JOKER_TABLES = load_cache(cache_path)
+        if _JOKER_TABLES is None:
+            raise RuntimeError(
+                f"Joker cache is incompatible with {CACHE_VERSION}. "
+                "Run 'python precompute_joker.py --force' to regenerate it."
+            )
 
         _JOKER_SCORE_TABLE = _JOKER_TABLES['joker_score_table']
 
@@ -620,6 +667,7 @@ def ev_remaining_joker(mask: int, upper: int, yahtzee_status: int) -> float:
     Returns:
         Expected additional points under optimal joker play
     """
+    validate_solver_state(mask, upper, yahtzee_status)
     tables = _load_joker_tables()
     upper = min(upper, MAX_UPPER)
     return float(tables['ev_remaining'][mask, upper, yahtzee_status])
@@ -627,24 +675,31 @@ def ev_remaining_joker(mask: int, upper: int, yahtzee_status: int) -> float:
 
 def v3_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> float:
     """Best expected value after roll 3 in joker mode, must choose a category."""
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
+    upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
     return float(v3_arr[roll_idx])
 
 
 def v2_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> float:
     """Best expected value after roll 2 in joker mode, before choosing what to keep."""
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
+    upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
     return float(v2_arr[roll_idx])
 
 
 def v1_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> float:
     """Best expected value after roll 1 in joker mode, before choosing what to keep."""
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
+    upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
     return float(v1_arr[roll_idx])
 
 
 def best_keep_roll1_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> Counts:
     """Get optimal keep decision after roll 1 in joker mode."""
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
     upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
     trans = _load_transitions()
@@ -665,6 +720,7 @@ def best_keep_roll1_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: 
 
 def best_keep_roll2_joker(roll_idx: int, mask: int, upper: int, yahtzee_status: int) -> Counts:
     """Get optimal keep decision after roll 2 in joker mode."""
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
     upper = min(upper, MAX_UPPER)
     v1_arr, v2_arr, v3_arr = _get_v_arrays_joker(mask, upper, yahtzee_status)
     trans = _load_transitions()
@@ -696,6 +752,8 @@ def best_category_joker(roll_idx: int, mask: int, upper: int,
     Returns:
         (category_index, expected_value_including_future)
     """
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
+    upper = min(upper, MAX_UPPER)
     tables = _load_joker_tables()
     is_ytz_arr = tables['is_yahtzee']
     ytz_face_arr = tables['yahtzee_face']
@@ -704,19 +762,19 @@ def best_category_joker(roll_idx: int, mask: int, upper: int,
     ev_remaining_arr = tables['ev_remaining']
 
     is_ytz = is_ytz_arr[roll_idx]
-    ytz_face = ytz_face_arr[roll_idx]
+    ytz_face = int(ytz_face_arr[roll_idx])
 
     # Joker bonus if rolling another yahtzee after scoring 50
     joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
 
     # Check for forced category
     forced_cat = None
-    if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+    if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
         upper_cat = ytz_face
         if not (mask & (1 << upper_cat)):
             forced_cat = upper_cat
 
-    legal_cats = get_legal_categories(mask)
+    legal_cats = get_legal_categories_joker(roll_idx, mask, yahtzee_status)
 
     # If forced, only consider that category
     if forced_cat is not None:
@@ -726,8 +784,8 @@ def best_category_joker(roll_idx: int, mask: int, upper: int,
     best_cat = None
 
     for cat in legal_cats:
-        # Use joker score table if eligible for joker
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+        # Any filled Yahtzee box enables Joker category scores.
+        if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
             pts = int(joker_score_table[roll_idx, cat])
         else:
             pts = int(score_table[roll_idx, cat])
@@ -761,6 +819,8 @@ def get_all_category_evs_joker(roll_idx: int, mask: int, upper: int,
         List of (category, immediate_points, total_expected_value, is_forced)
         sorted by EV descending
     """
+    _validate_roll_state(roll_idx, mask, upper, yahtzee_status)
+    upper = min(upper, MAX_UPPER)
     tables = _load_joker_tables()
     is_ytz_arr = tables['is_yahtzee']
     ytz_face_arr = tables['yahtzee_face']
@@ -769,18 +829,18 @@ def get_all_category_evs_joker(roll_idx: int, mask: int, upper: int,
     ev_remaining_arr = tables['ev_remaining']
 
     is_ytz = is_ytz_arr[roll_idx]
-    ytz_face = ytz_face_arr[roll_idx]
+    ytz_face = int(ytz_face_arr[roll_idx])
 
     joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
 
     # Check for forced category
     forced_cat = None
-    if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+    if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
         upper_cat = ytz_face
         if not (mask & (1 << upper_cat)):
             forced_cat = upper_cat
 
-    legal_cats = get_legal_categories(mask)
+    legal_cats = get_legal_categories_joker(roll_idx, mask, yahtzee_status)
     results = []
 
     for cat in legal_cats:
@@ -791,7 +851,7 @@ def get_all_category_evs_joker(roll_idx: int, mask: int, upper: int,
             continue
 
         # Use joker score table if eligible
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+        if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
             pts = int(joker_score_table[roll_idx, cat])
         else:
             pts = int(score_table[roll_idx, cat])
@@ -829,6 +889,7 @@ def get_recommendation_joker(dice: List[int], mask: int, upper: int,
     """
     from dice import dice_list_to_counts, counts_to_dice_list
 
+    validate_recommendation_inputs(dice, mask, upper, rolls_remaining, yahtzee_status)
     counts = dice_list_to_counts(dice)
     roll_idx = roll_id(counts)
 
@@ -851,11 +912,11 @@ def get_recommendation_joker(dice: List[int], mask: int, upper: int,
         # Must score
         cat, ev = best_category_joker(roll_idx, mask, upper, yahtzee_status)
         forced_cat = get_forced_category_joker(roll_idx, mask) if (
-            is_ytz and yahtzee_status == YAHTZEE_SCORED
+            is_ytz and yahtzee_status != YAHTZEE_UNFILLED
         ) else None
 
         # Get actual points
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED:
+        if is_ytz and yahtzee_status != YAHTZEE_UNFILLED:
             pts = int(tables['joker_score_table'][roll_idx, cat])
         else:
             pts = int(tables['score_table'][roll_idx, cat])
@@ -928,54 +989,11 @@ def get_recommendation_joker(dice: List[int], mask: int, upper: int,
 def _compute_v3_joker_for_state(mask: int, upper: int, yahtzee_status: int,
                                  tables: Dict) -> np.ndarray:
     """Compute v3 values for all rolls for a given joker state."""
-    v3_arr = np.zeros(NUM_ROLLS, dtype=np.float64)
-
-    is_ytz_arr = tables['is_yahtzee']
-    ytz_face_arr = tables['yahtzee_face']
-    score_table = tables['score_table']
-    joker_score_table = tables['joker_score_table']
-    ev_remaining_arr = tables['ev_remaining']
-
-    legal_cats = get_legal_categories(mask)
-
-    for rid in range(NUM_ROLLS):
-        is_ytz = is_ytz_arr[rid]
-        ytz_face = ytz_face_arr[rid]
-
-        joker_bonus = YAHTZEE_BONUS if (is_ytz and yahtzee_status == YAHTZEE_SCORED) else 0
-
-        # Check forced category
-        forced_cat = None
-        if is_ytz and yahtzee_status == YAHTZEE_SCORED:
-            if not (mask & (1 << ytz_face)):
-                forced_cat = ytz_face
-
-        cats_to_check = [forced_cat] if forced_cat is not None else legal_cats
-        best_ev = -1e9
-
-        for cat in cats_to_check:
-            if mask & (1 << cat):
-                continue
-
-            if is_ytz and yahtzee_status == YAHTZEE_SCORED:
-                pts = joker_score_table[rid, cat]
-            else:
-                pts = score_table[rid, cat]
-
-            new_mask = mask | (1 << cat)
-            new_upper = min(MAX_UPPER, upper + pts) if cat < 6 else upper
-
-            new_ys = yahtzee_status
-            if cat == YAHTZEE_CATEGORY:
-                new_ys = YAHTZEE_SCORED if pts == 50 else YAHTZEE_SCRATCHED
-
-            ev = pts + joker_bonus + ev_remaining_arr[new_mask, new_upper, new_ys]
-            if ev > best_ev:
-                best_ev = ev
-
-        v3_arr[rid] = best_ev
-
-    return v3_arr
+    return _compute_v3_joker_all_rolls(
+        mask, min(upper, MAX_UPPER), yahtzee_status,
+        tables['score_table'], tables['joker_score_table'],
+        tables['ev_remaining'], tables['is_yahtzee'], tables['yahtzee_face']
+    )
 
 
 def _compute_v2_joker_for_state(v3_arr: np.ndarray, tables: Dict) -> np.ndarray:
@@ -1039,8 +1057,7 @@ def clear_joker_v_cache():
     This can be useful for memory management in long-running applications.
     The cache will be repopulated on-demand as recommendations are requested.
     """
-    global _v_cache_joker
-    _v_cache_joker.clear()
+    _get_v_arrays_joker.cache_clear()
 
 
 def get_expected_score_fresh_game_joker() -> float:

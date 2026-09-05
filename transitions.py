@@ -125,18 +125,23 @@ def _initialize_transitions():
     if _TRANSITIONS is not None:
         return
 
-    _TRANSITIONS = {}
-    _KEEP_OPTIONS = {}
+    # Publish only complete tables: concurrent first requests must never see
+    # partially populated dictionaries. Duplicate cold computation is harmless.
+    transition_table = {}
+    keep_table = {}
 
     all_rolls = enumerate_rolls()
 
     for roll_idx, counts in enumerate(all_rolls):
         keeps = enumerate_keeps(counts)
-        _KEEP_OPTIONS[roll_idx] = keeps
+        keep_table[roll_idx] = keeps
 
         for keep in keeps:
             dist = compute_next_roll_dist(keep)
-            _TRANSITIONS[(roll_idx, keep)] = dist
+            transition_table[(roll_idx, keep)] = dist
+
+    _KEEP_OPTIONS = keep_table
+    _TRANSITIONS = transition_table
 
 
 def get_keep_options(roll_idx: int) -> List[KeepOption]:
