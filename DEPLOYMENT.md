@@ -1,5 +1,7 @@
 # Render deployment
 
+Public app: https://ysolver-vr0n.onrender.com/ (branch `backend-solver-hardening`).
+
 Deploy the Flask app as one Python web service. The current deployment settings
 are in `render.yaml`; they explicitly select `plan: free` and attach no disk.
 Keep Free selected when creating the service in the dashboard. Do not omit the
@@ -34,7 +36,11 @@ The Free instance provides 0.1 CPU and 512 MB RAM. It runs the same 10,000-game
 simulations and automatic exact endgames as the local app; the compute plan does
 not reduce the sample count or change the solver's accuracy. Calculations can
 take longer, and concurrent visitors share the existing single calculation slot.
-Measure uncached hosted calculations against the browser's 30-second timeout.
+The browser allows two minutes for a probability request, including retries
+while another calculation is running. It explains the longer wait after ten
+seconds. An uncached opening Yahtzee calculation measured 34.6 seconds on the
+Free instance; the tested exact endgame took 0.67 seconds. Results matched the
+local solver. These are individual measurements, not latency guarantees.
 
 Render stops a Free service after 15 minutes without inbound traffic. Opening it
 again starts it, usually taking about a minute, with Render's loading page shown
@@ -79,4 +85,4 @@ four-category exact case. This is a sizing reference, not a Linux memory bound;
 watch deployed memory and latency under actual traffic. If the free instance
 cannot handle the workload reliably, investigate optimization or another free
 host without changing the simulation sample count or upgrading to paid compute.
-The existing browser request timeout is 30 seconds.
+The browser probability request timeout is 120 seconds, including busy retries.

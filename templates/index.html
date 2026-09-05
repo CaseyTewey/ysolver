@@ -3101,11 +3101,19 @@
             const timeout = setTimeout(() => {
                 timedOut = true;
                 controller.abort();
-            }, 30000);
+            }, 120000);
+            const slowNotice = setTimeout(() => {
+                if (isCurrent() && !controller.signal.aborted) {
+                    showWinProbabilityStatus('Calculating odds…',
+                        'Still calculating. Waiting up to two minutes for the free server.');
+                }
+            }, 10000);
 
             try {
                 let data;
-                for (let attempt = 0; attempt <= 6; attempt++) {
+                // Keep the same overall deadline while waiting for another
+                // calculation; free hosting can take over 30 seconds per solve.
+                for (let attempt = 0; ; attempt++) {
                     const response = await fetch('/api/win_probability', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3113,11 +3121,11 @@
                         signal: controller.signal
                     });
                     if (!isCurrent()) return;
-                    if (response.status === 503 && attempt < 6) {
-                        showWinProbabilityStatus('Calculating odds…', 'The solver is busy. Retrying automatically…');
+                    if (response.status === 503) {
+                        showWinProbabilityStatus('Calculating odds…', 'The solver is busy. Retrying automatically for up to two minutes…');
                         const retryAfter = Number(response.headers.get('Retry-After') || 1);
                         const baseDelay = Number.isFinite(retryAfter) ? Math.max(0.1, retryAfter) : 1;
-                        const delay = Math.min(5, baseDelay * (2 ** attempt)) * 1000;
+                        const delay = Math.min(5, baseDelay * (2 ** Math.min(attempt, 6))) * 1000;
                         await waitForWinProbabilityRetry(delay, controller.signal);
                         if (!isCurrent()) return;
                         continue;
@@ -3188,6 +3196,7 @@
                 console.error('Error updating win probabilities:', error);
             } finally {
                 clearTimeout(timeout);
+                clearTimeout(slowNotice);
                 if (sequence === winProbabilityRequestSequence) winProbabilityRequestController = null;
             }
         }

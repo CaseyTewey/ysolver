@@ -44,6 +44,7 @@ const element = (id) => {
 const calls = [];
 const timers = new Map();
 let nextTimer = 1;
+let now = 0;
 const dropChecks = [];
 const context = vm.createContext({
     document: { getElementById: element, addEventListener() {} },
@@ -55,7 +56,7 @@ const context = vm.createContext({
     },
     setTimeout(callback, delay) {
         const id = nextTimer++;
-        timers.set(id, { callback, delay });
+        timers.set(id, { callback, delay, deadline: now + delay });
         return id;
     },
     clearTimeout: (id) => timers.delete(id)
@@ -91,6 +92,20 @@ function fireTimer(delay) {
     assert.ok(entry, `Missing timer for ${delay} ms`);
     timers.delete(entry[0]);
     entry[1].callback();
+}
+async function advanceTime(milliseconds) {
+    const target = now + milliseconds;
+    while (true) {
+        const entry = [...timers].filter(([, timer]) => timer.deadline <= target)
+            .sort((a, b) => a[1].deadline - b[1].deadline)[0];
+        if (!entry) break;
+        now = entry[1].deadline;
+        timers.delete(entry[0]);
+        entry[1].callback();
+        await flush();
+    }
+    now = target;
+    await flush();
 }
 const visible = (id) => !element(id).classList.contains('hidden');
 assert.ok(!html.includes('calculateExactWinProb'));
@@ -238,24 +253,55 @@ CASES = {
         assert.match(element('exact-result-values').textContent, /Tie: 5%/);
         assert.equal(timers.size, 0);
     """,
-    'busy_retries_are_bounded_with_visible_manual_retry': r"""
+    'busy_retries_share_the_overall_deadline_and_offer_manual_retry': r"""
         const pending = update();
-        const delays = [1000, 2000, 4000, 5000, 5000, 5000];
-        for (let attempt = 0; attempt < 7; attempt++) {
-            answer(attempt, {error: 'Solver busy'}, 503); await flush();
-            if (attempt < 6) {fireTimer(delays[attempt]); await flush()}
+        for (let attempt = 0; now < 120000; attempt++) {
+            answer(attempt, {error: 'Solver busy'}, 503);
+            await flush();
+            await advanceTime(Math.min(120000 - now, Math.min(5000, 1000 * 2 ** attempt)));
         }
         await pending;
-        assert.equal(calls.length, 7);
+        assert.equal(now, 120000);
+        assert.ok(calls.length > 7, 'Busy retries must allow a full free-server calculation to finish');
+        assert.equal(calls.at(-1).options.signal.aborted, true);
         assert.equal(element('win-prob-method-1').textContent, 'Odds unavailable');
+        assert.match(element('edge-case-reasons').textContent, /timed out/);
         assert.equal(element('win-prob-1').textContent, '--');
         assert.equal(visible('win-prob-retry'), true);
         assert.equal(timers.size, 0);
+        const retryIndex = calls.length;
         const retry = update();
-        assert.equal(calls.length, 8);
+        assert.equal(calls.length, retryIndex + 1);
         assert.equal(visible('win-prob-retry'), false);
-        answer(7, result('monte_carlo')); await retry;
+        answer(retryIndex, result('monte_carlo')); await retry;
         assert.equal(element('win-prob-method-1').textContent, 'Estimated odds · 10,000 simulations');
+    """,
+    'free_server_calculation_can_finish_after_thirty_seconds': r"""
+        const pending = update();
+        await advanceTime(10000);
+        assert.match(element('edge-case-reasons').textContent, /Still calculating.*two minutes/);
+        await advanceTime(25000);
+        assert.equal(calls[0].options.signal.aborted, false);
+        assert.equal(element('win-prob-1').textContent, '--');
+        assert.equal(visible('win-prob-retry'), false);
+        answer(0, result('monte_carlo', 75.58, 24.08, 0.34)); await pending;
+        assert.equal(element('win-prob-1').textContent, '~75.58%');
+        assert.equal(element('win-prob-method-1').textContent, 'Estimated odds · 10,000 simulations');
+        assert.equal(timers.size, 0);
+    """,
+    'busy_solver_can_become_available_after_thirty_seconds': r"""
+        const pending = update();
+        for (let attempt = 0; attempt < 9; attempt++) {
+            answer(attempt, {error: 'Solver busy'}, 503); await flush();
+            await advanceTime(Math.min(5000, 1000 * 2 ** attempt));
+        }
+        assert.equal(now, 37000);
+        assert.equal(calls.length, 10);
+        assert.equal(calls[9].options.signal.aborted, false);
+        await advanceTime(35000);
+        answer(9, result()); await pending;
+        assert.equal(element('win-prob-method-1').textContent, 'Estimated odds · 10,000 simulations');
+        assert.equal(timers.size, 0);
     """,
     'score_change_aborts_pending_retry': r"""
         const old = update();
@@ -281,7 +327,7 @@ CASES = {
     """,
     'timeout_cancels_transport_and_shows_retry': r"""
         const pending = update();
-        fireTimer(30000);
+        fireTimer(120000);
         assert.equal(calls[0].options.signal.aborted, true);
         calls[0].reject(new DOMException('Aborted', 'AbortError')); await pending;
         assert.match(element('edge-case-reasons').textContent, /timed out/);
