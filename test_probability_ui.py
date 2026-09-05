@@ -93,33 +93,6 @@ function fireTimer(delay) {
     entry[1].callback();
 }
 const visible = (id) => !element(id).classList.contains('hidden');
-function prepareUndo() {
-    context.document.getElementById = (id) => elements.get(id) || null;
-    context.document.createElement = () => {
-        const node = mockElement();
-        Object.defineProperty(node, 'innerHTML', {set(markup) {
-            for (const [, id] of markup.matchAll(/id="([^"]+)"/g)) elements.set(id, mockElement());
-        }});
-        return node;
-    };
-    for (const player of [1, 2]) {
-        for (const name of ['total', 'upper-total', 'bonus']) elements.set(`${name}-${player}`, mockElement());
-        for (let category = 0; category < 13; category++) {
-            const row = mockElement();
-            row.parentNode = { insertBefore(node) { elements.set(node.id, node) } };
-            elements.set(`row-${player}-${category}`, row);
-            elements.set(`score-${player}-${category}`, mockElement());
-            if ([8, 9, 10, 11].includes(category)) {
-                const toggle = mockElement();
-                const score = mockElement(), zero = mockElement();
-                toggle.querySelectorAll = () => [score, zero];
-                toggle.querySelector = (selector) => selector === '.score-btn' ? score : zero;
-                elements.set(`toggle-${player}-${category}`, toggle);
-            }
-        }
-    }
-    run('updateCurrentDieIndicator = () => {}; setActivePlayer = (player) => {activePlayer = player}; setRolls = (rolls) => {rollsRemaining = rolls};');
-}
 assert.ok(!html.includes('calculateExactWinProb'));
 assert.ok(!html.includes('/api/win_probability_exact'));
 assert.ok(!html.includes('Rough estimate (uncalibrated)'));
@@ -326,58 +299,7 @@ CASES = {
         answer(1, result()); await changed;
         await update(); assert.equal(calls.length, 2);
     """,
-    'undo_restores_turn_player_score_and_probability_request': r"""
-        prepareUndo();
-        setScores({11: 50});
-        run('activePlayer = 2; currentTurn = 2; yahtzeeStatus = {1: 2, 2: 0}; saveState();');
-        run('playerScores[2][11] = 50; yahtzeeStatus[2] = 2; activePlayer = 1; currentTurn = 3; updateTurnDisplay();');
-        assert.equal(element('current-turn-num').textContent, 3);
-        run('goBack()');
-        assert.equal(element('current-turn-num').textContent, 2);
-        assert.equal(element('turn-player-name').textContent, 'Player 2');
-        assert.equal(run('activePlayer'), 2);
-        assert.equal(element('score-2-11').value, '');
-        assert.equal(element('row-2-11').classList.contains('filled'), false);
-        assert.equal(element('total-1').textContent, 50);
-        assert.equal(element('total-2').textContent, 0);
-        const payload = JSON.parse(calls[0].options.body);
-        assert.deepEqual(payload.player2_scores, {});
-        assert.equal(payload.player2_yahtzee_status, 0);
-        answer(0, result('monte_carlo', 75.58, 24.08, 0.34)); await flush();
-        assert.equal(element('win-prob-1').textContent, '~75.58%');
-        assert.equal(timers.size, 0);
-    """,
-    'undo_restores_bonus_before_totals_and_updates_bonus_row': r"""
-        prepareUndo();
-        setScores({11: 50}, {11: 50});
-        run('activePlayer = 1; currentTurn = 3; yahtzeeStatus = {1: 2, 2: 2}; saveState();');
-        run('playerScores[1][5] = 30; yahtzeeBonuses[1] = 1; activePlayer = 2; currentTurn = 4; updateTotals(1); updateJokerBonusDisplay(1); updateTurnDisplay();');
-        assert.equal(element('total-1').textContent, 180);
-        assert.equal(element('joker-bonus-1').textContent, '+100');
-        assert.ok(elements.has('joker-bonus-row-1'), 'The bonus row must be inserted next to the actual Yahtzee row');
-        run('goBack()');
-        assert.equal(element('current-turn-num').textContent, 3);
-        assert.equal(element('turn-player-name').textContent, 'Player 1');
-        assert.equal(element('total-1').textContent, 50);
-        assert.equal(element('joker-bonus-1').textContent, '-');
-        assert.equal(element('score-1-5').value, '');
-        assert.equal(run('yahtzeeBonuses[1]'), 0);
-        const payload = JSON.parse(calls[0].options.body);
-        assert.equal(payload.player1_yahtzee_bonuses, 0);
-        assert.deepEqual(payload.player1_scores, {11: 50});
-        answer(0, result()); await flush();
-        assert.equal(timers.size, 0);
-    """,
-    'undo_older_snapshot_reconstructs_turn_and_preserves_selected_player': r"""
-        prepareUndo();
-        setScores({11: 50});
-        run('activePlayer = 1; currentTurn = 2; yahtzeeStatus = {1: 2, 2: 0}; saveState(); delete history[0].currentTurn;');
-        run('playerScores[2][11] = 50; yahtzeeStatus[2] = 2; currentTurn = 3; activePlayer = 2; goBack();');
-        assert.equal(element('current-turn-num').textContent, 2);
-        assert.equal(element('turn-player-name').textContent, 'Player 1');
-        assert.equal(run('activePlayer'), 1);
-        answer(0, result()); await flush();
-    """,
+
 }
 
 

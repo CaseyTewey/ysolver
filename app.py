@@ -14,7 +14,7 @@ import threading
 from datetime import datetime
 from functools import lru_cache
 from werkzeug.exceptions import HTTPException
-from api_state import InvalidState, integer, validate_dice, parse_scorecard
+from api_state import InvalidState, integer, validate_dice, parse_scorecard, parse_position
 from game_storage import load_games, append_game
 from mc_solver import simulate_match
 
@@ -140,6 +140,11 @@ def unexpected_error(error):
 @app.route('/api/health')
 def health():
     return jsonify(status='ok', mode='joker', objective='maximize_expected_score')
+
+
+@app.route('/api/validate_position', methods=['POST'])
+def validate_position():
+    return jsonify(parse_position(request_object()))
 
 
 # High-variance categories (bimodal distributions)

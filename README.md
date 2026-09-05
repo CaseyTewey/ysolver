@@ -30,6 +30,21 @@ Rebuild a missing or incompatible Joker cache with:
 
 Current Joker cache version: `3.0-hasbro-joker`. A full rebuild took about 11 seconds locally. Fresh-game expected scores are 254.5877287345 for official Joker rules and 245.8707745141 for traditional mode. Startup rejects incompatible Joker tables instead of silently using old rules. The unchanged traditional pickle currently emits a nonfatal NumPy deprecation warning.
 
+## Continue or enter a game in the browser
+
+Use **Enter / edit game** to join a game already being played on paper or to correct a position. The editor starts with the current scorecards. **Clear this form** clears only the draft; the live game stays unchanged until **Load position & solve** succeeds. Cancel leaves the game unchanged.
+
+- Fill both scorecards using the category selectors. **Unplayed** leaves a category available; **0 — scratch** consumes it for zero points.
+- Enter the count of extra Yahtzees: `1` means an already-earned 100-point bonus. Record the original 50-point Yahtzee in its scorecard box. Upper bonuses and totals are calculated automatically.
+- Choose the active player and rerolls left: `2` after the first roll, `1` after the second, or `0` when the dice must be scored. Current dice are optional and may be partially entered. Recommendations require all five dice; a complete roll triggers a recommendation after loading.
+- Check the preview totals and turn number. The turn is derived from the number of filled categories, including scratches, rather than entered separately. Uneven scorecards are allowed for analysis, but an unfinished game's active player must have a category available.
+
+Loading validates the draft before changing the live game and recalculates odds. **Undo Last stops at the starting point of a loaded game**, so it cannot jump back across an import. A separate **Restore previous game** control reverses the import; **Redo** can reopen it. An imported scorecard cannot reconstruct earlier rolls or decisions, so its turn log starts empty and records subsequent play. Undoing the import restores the previous log as well as the board.
+
+Undo and Redo retain up to 100 actions, subject to a storage-size limit. A scoring action includes the score, any Yahtzee bonus, the turn log, cleared dice, and the next player together. The previous true-Joker scoring path omitted history snapshots, which let Undo jump back to an old dice or manual-edit action; all scoring paths now use complete transactions. Typing dice and receiving recommendations update the saved current state without creating an undo entry for each edit.
+
+The current game, dice, and undo/redo history save automatically to this browser's `localStorage` and restore after refresh at the same site address. This is local browser persistence, with no account or device synchronization, and is separate from server-side completed-game history. If browser storage fails or is unavailable, play and undo/redo continue in memory and the UI reports that the tab should remain open. Invalid stored snapshots are rejected.
+
 ## API contract
 
 POST requests require a JSON object. A scorecard is an object keyed by category strings `"0"` through `"12"`; missing or `null` categories are open. Values must be valid nonnegative integer category scores. Zero is accepted for a scratched box. The server derives `yahtzee_status` from category 11 when omitted; explicit inconsistent status is rejected. `yahtzee_bonuses` is a count of already-earned 100-point bonuses.
@@ -45,6 +60,7 @@ POST requests require a JSON object. A scorecard is an object keyed by category 
 | --- | --- |
 | `GET /api/health` | Solver startup health, mode and optimization objective. |
 | `GET /api/modes` | HTTP uses Joker mode. |
+| `POST /api/validate_position` | Two scorecards and optional Yahtzee status/bonus fields using the `player1_` / `player2_` prefixes; `active_player` 1–2 (default 1); `rolls_remaining` 0–2 (default 2); optional `dice` with up to five slots, each 1–6 or `null`. Returns normalized `position` plus both players' totals and category counts. Validates and derives the turn without running the solver or saving a game. |
 | `POST /api/recommend` | Exactly five `dice` in 1–6; `rolls_remaining` 0–2, default 2; `scores`; optional status/bonuses. Returns a legal keep or scoring action, remaining expected value, and every legal scoring option. Completed cards return 409. |
 | `POST /api/score_options` | Same dice and scorecard; returns only legal Joker scoring options and the additional Yahtzee bonus. A completed card returns an empty list. |
 | `POST /api/game_ev` | Scorecard/status/bonuses; returns current score, remaining EV, and projected final score. |
@@ -112,7 +128,7 @@ Joker is the default. Compact CLI states use a filled-category `mask`, `upper`, 
 
 The test suite covers independent scoring and probability oracles, exhaustive Joker legality, every distinct keep, upper-bonus thresholds, last-category and multi-turn endgames, invalid inputs, cache consistency, concurrent access, complete matches, persistence, and CLI behavior. `pytest.ini` ensures both the original `tests.py` and new regression files run. GitHub Actions checks out LFS caches before testing.
 
-The automatic-odds frontend logic tests run the shipped script in a Node harness with controlled responses and timers, requiring no npm packages. Node 24 is configured in CI. Local environments without Node skip those frontend tests; install Node to run the complete suite. They cover method changes, sampling intervals, rare-outcome displays, stale responses, unchanged-state reuse, retries, and timeouts. Monte Carlo tests check the simulated policy, statistical intervals, reproducibility, accounting, and API integration.
+The automatic-odds frontend logic tests run the shipped script in a Node harness with controlled responses and timers, requiring no npm packages. Node 24 is configured in CI. Local environments without Node skip those frontend tests; install Node to run the complete suite. They cover method changes, sampling intervals, rare-outcome displays, stale responses, unchanged-state reuse, retries, and timeouts. Session-model tests exercise a 20-turn game with dice edits, one-action undo/redo, full snapshot isolation, refresh restoration, reversible imports, history limits, malformed storage, and storage failures. Position-validation tests cover score legality, bonus consistency, partial dice, derived turns, completed cards, and rejection before applying a draft. Monte Carlo tests check the simulated policy, statistical intervals, reproducibility, accounting, and API integration.
 
 History uses process-safe file locking and atomic replacement. Set `GAME_RESULTS_FILE` to a location on a persistent volume for deployment; the default is the existing repository JSON. Existing history is preserved, and corrupt history is never treated as an empty file during a save. This local-file store is intended for one host/shared filesystem, not distributed multi-host writes.
 
@@ -120,4 +136,4 @@ The current Render configuration has no persistent disk. Render's default filesy
 
 Early-game Monte Carlo estimates include discrete outcomes and ties but retain sampling uncertainty. Supported endgames automatically use exact distributions. Neither method conditions on the current dice or adapts its strategy to the opponent's score; both assume fresh turns and expected-score-optimal play. Full-game exact distributions and opponent-adaptive strategy remain outside the synchronous API. `match.compute_pivotal_categories` is an existing unfinished helper and is not exposed by the HTTP API.
 
-The service accepts caller-supplied scorecards; it does not provide accounts, per-user private histories, server-authoritative dice, or turn enforcement. These are product/backend decisions before a public multi-user release. The solver/API tests do not establish public deployment readiness or UI correctness.
+The service accepts caller-supplied scorecards; it does not provide accounts, per-user private histories, server-authoritative dice, or turn enforcement. These are product/backend decisions before a public multi-user release. The tests cover the documented solver and frontend behaviors; they do not establish public deployment readiness or correctness of every browser and layout.

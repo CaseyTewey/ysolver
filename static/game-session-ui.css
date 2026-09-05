@@ -1,0 +1,25 @@
+.session-toolbar {display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 auto 18px;max-width:1500px}
+.session-toolbar button,.session-dialog button,.controls-row .redo-btn {padding:10px 14px;border:1px solid #797d96;border-radius:8px;background:#363b54;color:white;cursor:pointer;font:inherit}
+.session-toolbar .position-button,.session-dialog .primary {background:#227dc2;border-color:#4097dc;font-weight:700}
+.session-toolbar button:disabled,.controls-row button:disabled {opacity:.4;cursor:default}
+.session-status {font-size:13px;color:#c0c4d6;flex:1;min-width:170px}
+.session-overlay {position:fixed;inset:0;background:#080b18c9;z-index:4000;display:flex;align-items:center;justify-content:center;padding:16px}
+.session-dialog {background:#252a40;color:#f6f7ff;border:1px solid #666c87;border-radius:16px;max-width:740px;width:100%;max-height:94vh;overflow:auto;padding:24px;box-shadow:0 20px 90px #0008}
+.session-dialog h2 {margin:0 0 10px;font-size:25px}
+.session-dialog p {color:#c4c9dc;line-height:1.5;margin:8px 0 16px}
+.session-dialog .dialog-top {display:flex;justify-content:space-between;align-items:center;gap:12px}
+.session-dialog table {width:100%;border-collapse:collapse;margin:16px 0}
+.session-dialog th,.session-dialog td {padding:6px 5px;text-align:left;border-bottom:1px solid #41465e}
+.session-dialog th:first-child {width:38%}
+.session-dialog select,.session-dialog input {width:100%;min-height:40px;background:#191e30;border:1px solid #777f9d;color:white;border-radius:6px;padding:7px;font-size:16px}
+.position-controls {display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.position-controls label {display:block;color:#dbe0f1;font-size:14px}
+.position-controls label select,.position-controls label input {margin-top:6px}
+.position-dice {display:flex;gap:8px;margin:8px 0 16px}
+.position-dice input {min-width:0;text-align:center}
+.position-preview {padding:12px;background:#333a53;border-radius:8px;color:#e5ebff;margin:12px 0;line-height:1.5}
+.position-error {color:#ffd3a2;line-height:1.45;min-height:22px}
+.dialog-actions {display:flex;justify-content:flex-end;gap:10px;margin-top:16px;flex-wrap:wrap}
+.controls-row {flex-wrap:wrap}
+.controls-row .redo-btn {color:#ffd45a;border:2px solid #9c8433}
+@media(max-width:600px){.session-dialog{padding:16px}.session-dialog h2{font-size:21px}.session-dialog th,.session-dialog td{padding:5px 3px;font-size:13px}.session-dialog select{padding:6px 3px;font-size:14px}.session-toolbar{margin:0 5px 12px}.session-toolbar button{font-size:13px;padding:8px}.session-status{font-size:12px}.position-controls{gap:10px}}

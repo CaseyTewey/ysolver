@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yahtzee Solver</title>
+    <link rel="stylesheet" href="/static/game-session-ui.css">
     <style>
         * {
             box-sizing: border-box;
@@ -1707,6 +1708,12 @@
     <div class="container">
         <h1>Yahtzee Solver<span class="mode-indicator hidden" id="mode-indicator"></span></h1>
 
+        <div class="session-toolbar">
+            <button class="position-button" id="position-open" onclick="openPositionEditor()">Enter / edit game</button>
+            <button class="hidden" id="restore-position-btn" onclick="restorePreviousPosition()">Restore previous game</button>
+            <span class="session-status" id="session-status" role="status">Your game saves in this browser</span>
+        </div>
+
         <div class="game-area">
             <!-- Scores Container - holds both player scorecards side by side on mobile -->
             <div class="scores-container">
@@ -1787,7 +1794,8 @@
                 </div>
                 <div class="controls-row">
                     <button class="clear-dice-btn" onclick="clearDice()">Clear Dice</button>
-                    <button class="back-btn" onclick="goBack()">Undo Last</button>
+                    <button class="back-btn" id="undo-btn" onclick="goBack()" disabled>Undo Last</button>
+                    <button class="redo-btn" id="redo-btn" onclick="goForward()" disabled>Redo</button>
                 </div>
 
                 <!-- Visual dice display (clickable to toggle keep/reroll) -->
@@ -1859,6 +1867,35 @@
             Fresh EV: <span id="fresh-ev">--</span> |
             <span id="last-calc-info" class="last-calc-info">Ready</span>
             <button class="article-btn" onclick="showArticle()">You're Playing Wrong</button>
+        </div>
+    </div>
+
+    <div class="session-overlay hidden" id="position-overlay" role="dialog" aria-modal="true" aria-labelledby="position-title">
+        <div class="session-dialog">
+            <div class="dialog-top"><h2 id="position-title">Enter a game position</h2><button onclick="closePositionEditor()" aria-label="Close position editor">✕</button></div>
+            <p>Playing on paper? Enter both scorecards here. Leave unused categories <strong>Unplayed</strong>; choose <strong>0 — scratch</strong> for a crossed-out box. Nothing changes until you load the position.</p>
+            <button onclick="clearPositionDraft()">Clear this form</button>
+            <table><thead><tr><th>Category</th><th>Player 1</th><th>Player 2</th></tr></thead><tbody id="position-score-rows"></tbody></table>
+            <div class="position-controls">
+                <label>Player 1 extra Yahtzees<input id="position-bonus-1" type="number" min="0" max="12" value="0" oninput="updatePositionPreview()"></label>
+                <label>Player 2 extra Yahtzees<input id="position-bonus-2" type="number" min="0" max="12" value="0" oninput="updatePositionPreview()"></label>
+            </div>
+            <p>Count the extra 100-point bonuses (enter 1 for +100). The first Yahtzee belongs in the scorecard above. Upper bonuses are automatic.</p>
+            <div class="position-controls">
+                <label>Whose turn?<select id="position-player"><option value="1">Player 1</option><option value="2">Player 2</option></select></label>
+                <label>Rerolls left<select id="position-rolls"><option value="2">2 — after the first roll</option><option value="1">1 — after the second roll</option><option value="0">0 — must score</option></select></label>
+            </div>
+            <label>Current dice (optional; leave blank before rolling)</label>
+            <div class="position-dice">
+                <input id="position-die-1" type="number" min="1" max="6" aria-label="Current die 1">
+                <input id="position-die-2" type="number" min="1" max="6" aria-label="Current die 2">
+                <input id="position-die-3" type="number" min="1" max="6" aria-label="Current die 3">
+                <input id="position-die-4" type="number" min="1" max="6" aria-label="Current die 4">
+                <input id="position-die-5" type="number" min="1" max="6" aria-label="Current die 5">
+            </div>
+            <div class="position-preview" id="position-preview"></div>
+            <div class="position-error" id="position-error" role="status" aria-live="polite"></div>
+            <div class="dialog-actions"><button onclick="closePositionEditor()">Cancel</button><button class="primary" id="position-apply" onclick="applyPositionEditor()">Load position &amp; solve</button></div>
         </div>
     </div>
 
@@ -1937,8 +1974,6 @@
             'LETS GOOO!',
         ];
 
-        // History for undo functionality
-        let history = [];
 
         // Start game with selected mode
         function startGame(mode) {
@@ -2125,14 +2160,17 @@
 
         // Log a roll in the current turn
         function logRoll(dice, rollsRemaining, recommendation) {
-            if (gameMode !== 'true' || !currentTurnData) return;
+            if (!['true', 'true-joker'].includes(gameMode) || !currentTurnData) return;
 
-            currentTurnData.rolls.push({
+            const roll = {
                 dice: [...dice],
                 rollsRemaining: rollsRemaining,
                 recommendation: recommendation,
                 timestamp: new Date().toISOString()
-            });
+            };
+            const existing = currentTurnData.rolls.findIndex(item => item.rollsRemaining === rollsRemaining);
+            if (existing >= 0) currentTurnData.rolls[existing] = roll;
+            else currentTurnData.rolls.push(roll);
         }
 
         // Toggle game log panel
@@ -2175,7 +2213,7 @@
 
         // Confirm turn and log it (True Gameplay mode) - shows category picker
         async function confirmTurn() {
-            if (gameMode !== 'true') return;
+            if (!['true', 'true-joker'].includes(gameMode)) return;
 
             if (!lastRecommendation) {
                 alert('Please enter your dice first. The recommendation will appear automatically.');
@@ -2183,11 +2221,10 @@
             }
 
             // Show category selection modal
+            const key = recommendationStateKey();
             const result = await selectCategory();
-            if (result === null) return;
-
-            // result is {id, points}
-            logAndScoreTurn(result.id, result.points);
+            if (result === null || key !== recommendationStateKey() || !lastRecommendation) return;
+            selectScoringOption(result.id, result.points);
         }
 
         // Show category selection popup - returns {id, points} or null
@@ -2725,94 +2762,7 @@
             }
         }
 
-        function saveState() {
-            history.push({
-                activePlayer,
-                currentTurn,
-                rollsRemaining,
-                currentDieIndex,
-                diceEntered,
-                dice: getDice(),
-                playerScores: JSON.parse(JSON.stringify(playerScores)),
-                // Joker mode state
-                yahtzeeStatus: {...yahtzeeStatus},
-                yahtzeeBonuses: {...yahtzeeBonuses}
-            });
-            // Keep only last 10 states
-            if (history.length > 10) history.shift();
-        }
-
-        function goBack() {
-            if (history.length === 0) return;
-            const state = history.pop();
-            activePlayer = state.activePlayer;
-            rollsRemaining = state.rollsRemaining;
-            currentDieIndex = state.currentDieIndex;
-            diceEntered = state.diceEntered;
-
-            // Restore dice
-            for (let i = 1; i <= 5; i++) {
-                const input = document.getElementById(`die-${i}`);
-                const val = state.dice[i-1];
-                input.value = val || '';
-                document.getElementById(`visual-die-${i}`).textContent = val || '?';
-                input.classList.toggle('filled', !!val && val >= 1 && val <= 6);
-            }
-
-            // Restore scores
-            playerScores = state.playerScores;
-            // Restore Joker state before totals, which include earned bonuses.
-            if (state.yahtzeeStatus) {
-                yahtzeeStatus = {...state.yahtzeeStatus};
-            }
-            if (state.yahtzeeBonuses) {
-                yahtzeeBonuses = {...state.yahtzeeBonuses};
-            }
-            currentTurn = state.currentTurn ?? Math.min(26, 1 + [1, 2].reduce(
-                (total, player) => total + Object.values(playerScores[player]).filter(value => value !== undefined && value !== null).length, 0));
-            for (let p = 1; p <= 2; p++) {
-                for (let cat = 0; cat < 13; cat++) {
-                    const input = document.getElementById(`score-${p}-${cat}`);
-                    const row = document.getElementById(`row-${p}-${cat}`);
-                    const toggle = document.getElementById(`toggle-${p}-${cat}`);
-
-                    if (playerScores[p][cat] !== undefined) {
-                        input.value = playerScores[p][cat];
-                        row.classList.add('filled');
-
-                        // Handle toggle buttons for fixed score categories
-                        if (toggle) {
-                            const buttons = toggle.querySelectorAll('.toggle-btn');
-                            buttons.forEach(btn => btn.classList.remove('active'));
-                            if (playerScores[p][cat] > 0) {
-                                toggle.querySelector('.score-btn').classList.add('active');
-                            } else {
-                                toggle.querySelector('.zero-btn').classList.add('active');
-                            }
-                        }
-                    } else {
-                        input.value = '';
-                        row.classList.remove('filled');
-                        // Clear toggle button states
-                        if (toggle) {
-                            toggle.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-                        }
-                    }
-                }
-                updateTotals(p);
-                updateJokerBonusDisplay(p);
-            }
-
-            // Update UI
-            updateCurrentDieIndicator();
-            setActivePlayer(activePlayer);
-            updateTurnDisplay();
-            setRolls(rollsRemaining);
-            updateWinProbabilities();
-        }
-
         function clearDice() {
-            saveState();
             for (let i = 1; i <= 5; i++) {
                 const input = document.getElementById(`die-${i}`);
                 input.value = '';
@@ -2930,7 +2880,6 @@
 
         // Update score
         function updateScore(player, category, value) {
-            saveState();
             if (value === '' || value === null) {
                 delete playerScores[player][category];
                 document.getElementById(`row-${player}-${category}`).classList.remove('filled');
@@ -2953,7 +2902,6 @@
             // Check if already filled
             if (playerScores[player][category] !== undefined) return;
 
-            saveState();
 
             // Reset waiting state
             waitingForAction = false;
@@ -3001,6 +2949,7 @@
 
         // Clear dice for a new turn without saving state (called after scoring)
         function clearDiceForNewTurn() {
+            invalidateRecommendation();
             for (let i = 1; i <= 5; i++) {
                 const input = document.getElementById(`die-${i}`);
                 input.value = '';
@@ -3315,7 +3264,6 @@
                 return;
             }
 
-            saveState();
             setRolls(rollsRemaining - 1);
             // Reset dice entry for next roll
             diceEntered = 0;
@@ -3463,6 +3411,9 @@
                     else if (e.key === 'Backspace') {
                         e.preventDefault();
                         input.value = '';
+                        invalidateRecommendation();
+                        waitingForAction = false; allDiceFilled = false; keptDiceIndices = [];
+                        persistGameSession();
                         input.classList.remove('filled');
                         document.getElementById(`visual-die-${i}`).textContent = '?';
                         if (i > 1) {
@@ -3519,7 +3470,8 @@
             // Global keyboard handler for when no dice input is focused
             document.addEventListener('keydown', (e) => {
                 // Only if not focused on any input
-                if (document.activeElement.tagName === 'INPUT') return;
+                if (!document.getElementById('position-overlay').classList.contains('hidden') ||
+                    ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
                 if (e.key >= '1' && e.key <= '6') {
                     e.preventDefault();
@@ -3531,58 +3483,37 @@
 
         // Get recommendation from server
         async function getRecommendation() {
-            const dice = getDiceForAPI();
-            const scores = {};
-
-            // Convert scores to expected format (only valid numeric categories)
-            for (const [cat, score] of Object.entries(playerScores[activePlayer])) {
-                const catNum = parseInt(cat);
-                if (!isNaN(catNum) && catNum >= 0 && catNum <= 12 && score !== undefined) {
-                    scores[cat] = score;
-                }
+            const body = recommendationRequestBody();
+            const key = recommendationStateKey();
+            invalidateRecommendation();
+            if (body.dice.some(d => d === null)) {
+                document.getElementById('recommendation').innerHTML = '<div class="rec-action">Enter all five dice</div><div class="rec-details">Blank dice are never guessed.</div>';
+                return;
             }
-
+            const sequence = recommendationRequestSequence;
+            const controller = new AbortController();
+            recommendationRequestController = controller;
+            const isCurrent = () => sequence === recommendationRequestSequence && key === recommendationStateKey();
+            document.getElementById('recommendation').innerHTML = '<div class="rec-action">Calculating move…</div>';
             try {
-                // Build request body with joker mode params if applicable
-                const requestBody = {
-                    dice: dice,
-                    rolls_remaining: rollsRemaining,
-                    scores: scores
-                };
-
-                if (isJokerMode) {
-                    requestBody.mode = 'joker';
-                    requestBody.yahtzee_status = yahtzeeStatus[activePlayer];
-                    requestBody.yahtzee_bonuses = yahtzeeBonuses[activePlayer];
-                }
-
-                const response = await fetch('/api/recommend', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
+                const response = await fetch('/api/recommend', {method:'POST',headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(body),signal:controller.signal});
                 const data = await response.json();
-                lastRecommendation = data;
+                if (!isCurrent()) return;
+                if (!response.ok) throw new Error(data.error || 'Unable to calculate this move.');
+                lastRecommendation = data; lastRecommendationKey = key;
                 displayRecommendation(data);
-
-                // Update calc mode indicator
-                updateLastCalcInfo(data.mode || 'traditional', 'recommend', data.expected_value);
-
-                // Log the roll for true gameplay mode
-                if (gameMode === 'true' || gameMode === 'true-joker') {
-                    logRoll(dice, rollsRemaining, data);
-                    // Enable confirm button when recommendation is ready
-                    const confirmBtn = document.getElementById('confirm-score-btn');
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'Pick Category to Score';
-                }
+                updateLastCalcInfo(data.mode || 'joker', 'recommend', data.expected_value);
+                logRoll(body.dice, body.rolls_remaining, data);
+                document.getElementById('confirm-score-btn').disabled = false;
+                document.getElementById('confirm-score-btn').textContent = 'Pick Category to Score';
+                persistGameSession();
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('recommendation').innerHTML = `
-                    <div class="rec-action" style="color: #f44336;">Error</div>
-                    <div class="rec-details">Could not get recommendation. Is the server running?</div>
-                `;
+                if (!isCurrent() || error.name === 'AbortError') return;
+                const panel = document.getElementById('recommendation');
+                panel.textContent = error.message;
+            } finally {
+                if (sequence === recommendationRequestSequence) recommendationRequestController = null;
             }
         }
 
@@ -3752,6 +3683,9 @@
                 return;
             }
 
+            if (!lastRecommendation || lastRecommendationKey !== recommendationStateKey() ||
+                !lastRecommendation.category_options?.some(option => option.category === categoryId && option.points === points)) return;
+
             // Handle joker mode tracking before scoring
             if (isJokerMode) {
                 handleJokerScoring(activePlayer, categoryId, points);
@@ -3824,7 +3758,6 @@
                 allDiceFilled = false;
                 keptDiceIndices = [];
 
-                saveState();
 
                 // Initialize player scores if needed
                 if (!playerScores[activePlayer]) {
@@ -3847,10 +3780,10 @@
 
                 // Auto-switch to other player
                 const otherPlayer = activePlayer === 1 ? 2 : 1;
-                setTimeout(() => {
-                    setActivePlayer(otherPlayer);
-                    clearDiceForNewTurn();
-                }, 300);
+                setActivePlayer(Object.keys(playerScores[otherPlayer]).length < 13 ? otherPlayer : activePlayer);
+                currentTurn = Math.min(26, 1 + Object.keys(playerScores[1]).length + Object.keys(playerScores[2]).length);
+                clearDiceForNewTurn();
+                initTurn();
 
             } catch (error) {
                 console.error('Error in scoreCategoryFreePlay:', error);
@@ -3922,21 +3855,12 @@
                 return;
             }
 
-            // Advance to next turn
-            currentTurn++;
-            const nextPlayer = activePlayer === 1 ? 2 : 1;
-            console.log('Switching to player:', nextPlayer, 'turn:', currentTurn);
-
-            setTimeout(() => {
-                activePlayer = nextPlayer;
-                setActivePlayer(activePlayer);
-                clearDiceForNewTurn();
-                initTurn();
-                lastRecommendation = null;
-                const confirmBtn = document.getElementById('confirm-score-btn');
-                if (confirmBtn) confirmBtn.disabled = true;
-                console.log('Turn switch complete, now player:', activePlayer);
-            }, 300);
+            // Finish the turn synchronously so Undo cannot race a delayed switch.
+            currentTurn = Math.min(26, 1 + Object.keys(playerScores[1]).length + Object.keys(playerScores[2]).length);
+            const otherPlayer = activePlayer === 1 ? 2 : 1;
+            setActivePlayer(Object.keys(playerScores[otherPlayer]).length < 13 ? otherPlayer : activePlayer);
+            clearDiceForNewTurn();
+            initTurn();
 
             } catch (error) {
                 console.error('Error in logAndScoreTurn:', error);
@@ -3998,6 +3922,7 @@
 
             // Auto-start in joker mode (no mode selection needed)
             startGame('true-joker');
+            initializeGameSession();
 
             // Focus first dice input
             setTimeout(() => {
@@ -4066,5 +3991,7 @@
             }
         }
     </script>
+    <script src="/static/game-session.js"></script>
+    <script src="/static/game-session-ui.js"></script>
 </body>
 </html>

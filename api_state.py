@@ -88,3 +88,47 @@ def parse_scorecard(data, prefix=''):
     if bonuses and (status != 2 or bonuses > mask.bit_count() - 1):
         raise InvalidState(f'{bonus_field} requires a scored Yahtzee and enough completed turns')
     return Scorecard(dict(scores), mask, upper, status, bonuses)
+
+
+def parse_position(data):
+    """Normalize an editable position without calculating odds or changing a game.
+
+    Blank categories remain open; a score of zero consumes a category. Uneven
+    scorecards are useful for analysis, so only the selected player's ability to
+    take another turn is checked. Turn numbering follows completed categories.
+    Partial dice are input in progress and do not change the scorecard odds.
+    """
+    players = (parse_scorecard(data, 'player1_'), parse_scorecard(data, 'player2_'))
+    active_player = integer(data.get('active_player', 1), 'active_player', 1, 2)
+    rolls_remaining = integer(data.get('rolls_remaining', 2), 'rolls_remaining', 0, 2)
+    dice = data.get('dice', [])
+    if not isinstance(dice, list) or len(dice) > 5:
+        raise InvalidState('dice must contain up to five slots, each blank or an integer from 1 to 6')
+    for index, face in enumerate(dice):
+        if face is not None:
+            integer(face, f'dice.{index}', 1, 6)
+
+    completed = all(player.remaining == 0 for player in players)
+    if not completed and players[active_player - 1].remaining == 0:
+        raise InvalidState(f'active_player: Player {active_player} has no categories left; select Player {3 - active_player}')
+    position = {
+        'active_player': active_player,
+        'rolls_remaining': rolls_remaining,
+        'dice': list(dice) + [None] * (5 - len(dice)),
+        'current_turn': min(26, sum(13 - player.remaining for player in players) + 1),
+        'completed': completed,
+    }
+    result = {'position': position}
+    for index, player in enumerate(players, 1):
+        prefix = f'player{index}'
+        position[prefix + '_scores'] = {str(cat): player.scores.get(str(cat)) for cat in range(13)}
+        position[prefix + '_yahtzee_status'] = player.yahtzee_status
+        position[prefix + '_yahtzee_bonuses'] = player.yahtzee_bonuses
+        result[prefix] = {
+            'current_total': player.current_total,
+            'upper_total': player.upper,
+            'upper_bonus': player.upper_bonus,
+            'filled_categories': 13 - player.remaining,
+            'categories_remaining': player.remaining,
+        }
+    return result
