@@ -1,7 +1,9 @@
 # Render deployment
 
 Deploy the Flask app as one Python web service. The current deployment settings
-are in `render.yaml`; they do not select a paid instance or attach a disk.
+are in `render.yaml`; they explicitly select `plan: free` and attach no disk.
+Keep Free selected when creating the service in the dashboard. Do not omit the
+Blueprint plan: Render otherwise selects a paid compute plan for a new service.
 
 - Python: `3.14.6`.
 - Build: `python -m pip install -r requirements-render.txt && python deploy.py build`.
@@ -26,17 +28,37 @@ The Numba cache uses portable CPU instructions and lives in `.numba-cache/` by
 default. `NUMBA_CACHE_DIR` can override it. `OPENBLAS_NUM_THREADS` and
 `NUMBA_NUM_THREADS` are set to one in the Render environment.
 
+## Free hosting behavior
+
+The Free instance provides 0.1 CPU and 512 MB RAM. It runs the same 10,000-game
+simulations and automatic exact endgames as the local app; the compute plan does
+not reduce the sample count or change the solver's accuracy. Calculations can
+take longer, and concurrent visitors share the existing single calculation slot.
+Measure uncached hosted calculations against the browser's 30-second timeout.
+
+Render stops a Free service after 15 minutes without inbound traffic. Opening it
+again starts it, usually taking about a minute, with Render's loading page shown
+while it wakes. The solver's startup checks also run before it accepts requests.
+Server files and in-memory result caches are lost when the service stops.
+
+Free compute is subject to monthly usage quotas. For strictly zero spending,
+check workspace billing as well: with a payment method, bandwidth overages can
+be billed, and extra build minutes can be billed unless a spend limit stops them.
+Without a payment method, Render suspends affected free services or new builds
+when the included usage runs out. Do not add paid resources or a payment method
+for this deployment. See [Render's Free plan documentation](https://render.com/docs/free)
+and [Blueprint compute plans](https://render.com/docs/blueprint-spec#plan).
+
 ## Saved games
 
 `GAME_RESULTS_FILE` defaults to `/tmp/ysolver/game_results.json`. It starts empty
 and never uses the sample `game_results.json` committed to the repository.
 Existing history at the configured path is preserved during startup.
 
-That default is **ephemeral**: Render can erase it on restart or deployment. To
-retain completed games, attach a persistent disk at `/var/data` and set
-`GAME_RESULTS_FILE=/var/data/game_results.json`. Build does not access this path
-because Render disks are available only at runtime. Keep one service instance
-with the current file-based history implementation.
+That default is **ephemeral**: Render erases it on restart, deployment, or idle
+shutdown. Free services cannot attach persistent disks, so server-side completed
+game history is temporary in this deployment. Keep one service instance with
+the current file-based history implementation.
 
 Current games and Undo/Redo are autosaved in each browser, independently of the
 server's completed-game history. Browser saves are specific to the site's
@@ -54,5 +76,7 @@ Undo/Redo, and a browser refresh work on the hosted domain.
 Local macOS measurements with this configuration reached about 302 MiB peak
 RSS after cold JIT compilation, full-game simulations, and a mixed-upper-section
 four-category exact case. This is a sizing reference, not a Linux memory bound;
-watch deployed memory and latency under actual traffic before selecting a final
-instance size. The existing browser request timeout is 30 seconds.
+watch deployed memory and latency under actual traffic. If the free instance
+cannot handle the workload reliably, investigate optimization or another free
+host without changing the simulation sample count or upgrading to paid compute.
+The existing browser request timeout is 30 seconds.

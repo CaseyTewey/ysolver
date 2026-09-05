@@ -2,6 +2,7 @@ services:
   - type: web
     name: ysolver
     runtime: python
+    plan: free
     buildCommand: python -m pip install -r requirements-render.txt && python deploy.py build
     startCommand: gunicorn --config gunicorn.conf.py app:app
     healthCheckPath: /api/health
@@ -16,7 +17,7 @@ services:
         value: "1"
       - key: NUMBA_CPU_NAME
         value: generic
-      # This separate file starts empty. Set this to /var/data/game_results.json
-      # when a persistent disk is attached at /var/data; /tmp is ephemeral.
+      # Free services have no persistent disk. Server history is temporary;
+      # the current game and Undo/Redo remain saved in each visitor's browser.
       - key: GAME_RESULTS_FILE
         value: /tmp/ysolver/game_results.json
